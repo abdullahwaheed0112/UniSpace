@@ -1,0 +1,349 @@
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+  /* Background image with fallback gradient */
+  background: 
+    linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), /* optional overlay for contrast */
+    url('../images/pawel-czerwinski-pC8e7FFONcI-unsplash.jpg') no-repeat center center fixed;
+  
+  background-size: cover; /* makes it cover the full screen */
+  min-height: 100vh;
+  font-family: 'Segoe UI', sans-serif;
+  color: #fff; /* optional, if text needs to be readable over the image */
+  
+  /* Centering the content in the viewport */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.navbar .container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Card styling */
+.card {
+  background: rgba(33, 37, 41, 0.85); /* greyish card */
+  border-radius: 15px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  color: #fff; /* white text */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+}
+
+.card h1 {
+  margin-bottom: 25px;
+}
+
+/* Input fields */
+.card input.form-control {
+  background: rgba(30, 30, 30, 0.8); /* slightly lighter than card */
+  border: none;
+  color: #fff;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.card input.form-control::placeholder {
+  color: #bbb;
+}
+
+.card input.form-control:focus {
+  background: rgba(40, 40, 40, 0.8);
+  color: #fff;
+  box-shadow: none; /* removes default bootstrap glow */
+  outline: none;
+  border-color: #ff7e5f;
+}
+
+/* Login button */
+.card button.btn-primary {
+  background: linear-gradient(135deg, #ff7e5f, #feb47b); /* orange gradient for contrast */
+  border: none;
+  font-weight: bold;
+  padding: 0.75rem;
+  width: 100%;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  color: #fff;
+}
+
+.card button.btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+.card::before {
+  content: '';
+  display: block;
+  height: 5px;
+  border-radius: 15px 15px 0 0;
+  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  margin-bottom: 1rem;
+}
+
+/* Message Text */
+#message {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+#message.success {
+    color: #4CAF50; /* slightly lighter green for dark theme */
+}
+
+#message.error {
+    color: #f44336; /* vibrant red for dark theme */
+}
+
+/* Switch Page Link */
+.switch-page {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #ddd;
+}
+
+.switch-page a {
+    color: #ff7e5f;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.switch-page a:hover {
+    text-decoration: underline;
+}
+
+/* Navbar */
+#navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.navbar {
+    background: rgba(15, 15, 20, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.navbar-brand {
+    font-size: 1.6rem;
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #ff7e5f, #feb47b);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover {
+    transform: scale(1.05);
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+}
+
+.nav-links li a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 600;
+    position: relative;
+    padding: 5px 0;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.nav-links li a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ff7e5f, #feb47b);
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+.nav-links li a:hover {
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.3);
+}
+
+.nav-links li a:hover::after,
+.nav-links li a.active::after {
+    width: 100%;
+}
+
+.nav-links li a.active {
+    color: #fff;
+}
+
+/* Home Page Hero */
+.hero {
+    background-color: rgba(33, 37, 41, 0.85); /* Updated to match card */
+    padding: 50px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.hero h1 {
+    color: #fff;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.hero p {
+    color: #ccc;
+    font-size: 1.2rem;
+}
+
+/* Navbar Dynamic Elements */
+.welcome-text {
+    color: #ff7e5f;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+/* Input Autofill fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px rgba(30, 30, 30, 1) inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Dark Select Dropdowns */
+.form-select-dark {
+  background-color: rgba(30,30,30,0.8);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.6rem 2.25rem 0.6rem 1rem;
+  font-size: 1rem;
+  background-position: right 1rem center;
+}
+
+.form-select-dark option {
+  background: #222;
+  color: #fff;
+}
+
+.form-select-dark:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255,126,95,0.3);
+  border-color: #ff7e5f;
+}
+
+/* My Bookings Hover Effect */
+.my-bookings-title {
+  transition: transform 0.3s ease;
+}
+
+body:has(.my-bookings-card:hover) .my-bookings-title {
+  transform: translateY(-10px);
+}
+
+/* Notification Bell & Dropdown */
+.notification-bell {
+    position: relative;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+}
+
+.notification-badge {
+    font-size: 0.6rem;
+    padding: 3px 6px;
+    transform: translate(-30%, -30%) !important;
+}
+
+.notif-dropdown-menu {
+    background: rgba(33, 37, 41, 0.95);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.notif-item {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #fff;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.notif-item.unread {
+    background: rgba(255, 126, 95, 0.1);
+    border-left: 3px solid #ff7e5f;
+}
+
+.notif-date {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 5px;
+    display: block;
+}
+
+.notif-empty {
+    padding: 20px;
+    text-align: center;
+    color: #aaa;
+}
+

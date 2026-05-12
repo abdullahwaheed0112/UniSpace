@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>UniSpace+ Booking</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+<style>
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+  }
+  .btn-fancy-submit {
+    background: linear-gradient(135deg, #ff7e5f, #feb47b);
+    border: none;
+    color: white;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 12px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 126, 95, 0.3);
+  }
+  .btn-fancy-submit:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 126, 95, 0.5);
+    color: white;
+  }
+  .btn-fancy-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 12px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+  .btn-fancy-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+    color: white;
+  }
+  .fancy-alert {
+    border-radius: 15px;
+    padding: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    animation: alertSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fancy-alert-success {
+    background: rgba(40, 167, 69, 0.15);
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+  .fancy-alert-error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+  }
+  @keyframes alertSlideIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+
+<!-- Navbar Placeholder -->
+<div id="navbar"></div>
+
+<div class="container mt-3">
+<h2 class="text-center">UniSpace+ Booking</h2>
+</div>
+
+<!-- Booking Form -->
+<div class="container mt-2 d-flex justify-content-center align-items-center">
+  <div class="card shadow-lg p-4 glass-card" style="width: 100%; max-width: 600px; border-radius: 20px;">
+    <h2 class="text-center mb-4">Book a Resource</h2>
+    <form id="bookingForm">
+      <div class="mb-3">
+        <label for="resource" class="form-label">Select Resource</label>
+        <select class="form-select form-select-dark" id="resource" required>
+          <option value="">Choose a resource</option>
+          <option value="Conference Room">Conference Room</option>
+          <option value="Study Room">Study Room</option>
+          <option value="Lab">Lab</option>
+          <option value="Auditorium">Auditorium</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="date" class="form-label">Select Date</label>
+        <select class="form-select form-select-dark" id="date" required>
+          <option value="">Choose a date</option>
+          <!-- Dates will be populated by JavaScript -->
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="timeSlot" class="form-label">Select Time Slot</label>
+        <select class="form-select form-select-dark" id="timeSlot" required>
+          <option value="">Choose a time slot</option>
+          <!-- Time slots will be populated by JavaScript -->
+        </select>
+      </div>
+      <div class="d-grid gap-3">
+        <button type="submit" class="btn btn-fancy-submit">Submit Request</button>
+        <button type="button" class="btn btn-fancy-cancel" onclick="window.history.back()">Cancel</button>
+      </div>
+    </form>
+    
+    <div id="successMessage" class="fancy-alert fancy-alert-success" style="display: none;">
+      <i class="fa-solid fa-circle-check fs-4"></i>
+      <span><strong>Success!</strong> Booking request submitted successfully.</span>
+    </div>
+  </div>
+</div>
+
+<div id="blockedMessage" class="container mt-3" style="display:none; max-width: 600px;">
+  <div class="fancy-alert fancy-alert-error">
+    <i class="fa-solid fa-circle-xmark fs-4"></i>
+    <span>🚫 This slot has been blocked by the admin and cannot be booked.</span>
+  </div>
+</div>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="loadNavbar.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
