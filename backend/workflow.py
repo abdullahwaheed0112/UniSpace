@@ -11,6 +11,8 @@ Rules, in plain words:
 - Rejected and Cancelled are final.
 - Every change is written to the booking_events table, so a booking's history is always visible.
 """
+from datetime import datetime
+
 from validators import SLOT_LABELS
 
 PENDING, REVIEW, APPROVED, REJECTED, CANCELLED = "Pending", "Under Review", "Approved", "Rejected", "Cancelled"
@@ -54,8 +56,17 @@ def check_transition(current, target, roles, note):
     return None
 
 
+def _friendly_date(iso):
+    """'2026-11-25' -> 'Wed 25 Nov'. Falls back to the original text if it is not an ISO date."""
+    try:
+        day = datetime.strptime(str(iso), "%Y-%m-%d")
+    except ValueError:
+        return str(iso)
+    return f"{day:%a} {day.day} {day:%b}"
+
+
 def describe(booking):
-    return f"{booking['resource']} on {booking['date']} ({SLOT_LABELS.get(booking['time_slot'], booking['time_slot'])})"
+    return f"{booking['resource']} on {_friendly_date(booking['date'])} ({SLOT_LABELS.get(booking['time_slot'], booking['time_slot'])})"
 
 
 def _notify(cursor, username, message):
