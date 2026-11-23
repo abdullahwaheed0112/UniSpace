@@ -1,4 +1,8 @@
-flask
-flask-cors
-mysql-connector-python
-python-dotenv
+# Versions the app and its tests were run with (Python 3.15.0, Windows 11, MySQL 8.0.46).
+flask==3.1.3
+flask-cors==6.0.5
+mysql-connector-python==26.10.0
+python-dotenv==1.2.4
+# Imported directly by the code (they also ship with Flask):
+werkzeug==3.1.9
+itsdangerous==2.2.0
