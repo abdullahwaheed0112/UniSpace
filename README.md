@@ -253,6 +253,8 @@ Python · Flask · Flask-CORS · MySQL 8 · mysql-connector-python · Werkzeug (
 
 UniSpace began as a **university group project** by three students (IDs i242582, i242510 and i242567). This repository is a fork of [`Fireguy1/UniSpace-`](https://github.com/Fireguy1/UniSpace-), the repository of that original submission. The original code is kept in the history as the first commit (`full project`).
 
+In the original submission, **Abdullah Waheed (i242510) worked across the stack, from the Flask backend to the frontend**. The other two members' contributions are theirs to describe.
+
 Everything after that first commit is **post-submission work by Abdullah Waheed (i242510)** and is listed in the commit history, commit by commit: the security fixes above, the approval workflow and audit trail, the database constraints, the automated tests, the redesigned frontend and this documentation.
 
 License: none chosen yet. Contact: [GitHub](https://github.com/abdullahwaheed0112) · [LinkedIn](https://linkedin.com/in/abdullah-waheed-05a5a1416)
