@@ -3,6 +3,7 @@ from flask_cors import CORS
 import mysql.connector
 
 import config
+from auth import hash_password, verify_password
 from db import get_db
 
 # Create the Flask app
@@ -27,7 +28,7 @@ def signup():
 
     # Insert the user into the database
     sql = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
-    values = (username, email, password)
+    values = (username, email, hash_password(password))  # only the salted hash is stored
 
     try:
         cursor.execute(sql, values)
@@ -53,15 +54,20 @@ def signin():
 
     cursor = db.cursor()
 
-    # Check if user exists with this email and password
-    sql = "SELECT id, username, email, role FROM users WHERE email = %s AND password = %s"
-    cursor.execute(sql, (email, password))
+    # Look the user up by email, then verify the password against the stored hash
+    cursor.execute("SELECT id, username, email, role, password FROM users WHERE email = %s", (email,))
     user = cursor.fetchone()
+
+    ok, needs_rehash = verify_password(user[4] if user else None, password)
+    if ok and needs_rehash:
+        # Legacy plain-text password from before hashing: upgrade it now that we know the real password
+        cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hash_password(password), user[0]))
+        db.commit()
 
     cursor.close()
     db.close()
 
-    if user:
+    if user and ok:
         # user[0]=id, user[1]=username, user[2]=email, user[3]=role
         return jsonify({
             "message": f"Welcome back, {user[1]}!",

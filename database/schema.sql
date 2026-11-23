@@ -9,13 +9,11 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL,
-    password VARCHAR(100) NOT NULL,
+    password VARCHAR(255) NOT NULL,  -- salted scrypt hash, never the plain password
     role VARCHAR(20) DEFAULT 'student'
 );
 
--- Insert a default admin user (password: admin123)
-INSERT IGNORE INTO users (username, email, password, role) 
-VALUES ('Admin', 'admin@unispace.com', 'admin123', 'admin');
+-- The first admin account is created by backend/seed_admin.py (no default password is stored in this file).
 
 -- Create bookings table
 CREATE TABLE IF NOT EXISTS bookings (
