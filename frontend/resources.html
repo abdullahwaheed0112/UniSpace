@@ -119,7 +119,8 @@ async function renderTable(resourceValue) {
   let blocked = [];
   
   try {
-      const bRes = await apiFetch("/bookings");
+      // Public availability: which slots have a request or an approved booking (no usernames are returned)
+      const bRes = await apiFetch(`/availability?resource=${encodeURIComponent(resourceValue)}&from=${formatDate(days[0])}&to=${formatDate(days[days.length - 1])}`, { auth: false });
       bookings = Array.isArray(bRes.data) ? bRes.data : [];
 
       const bsRes = await apiFetch("/blocked_slots", { auth: false });
@@ -154,12 +155,9 @@ async function renderTable(resourceValue) {
         b.time === slot.value
       );
       // Check booked
-      const isBooked = bookings.some(b =>
-        b.resource === resourceValue &&
-        b.date === dateStr &&
-        b.timeSlot === slot.value &&
-        b.status !== 'Rejected'
-      );
+      const taken = bookings.find(b => b.date === dateStr && b.timeSlot === slot.value);
+      const isBooked = Boolean(taken && taken.status === 'Approved');   // an approved booking holds the slot
+      const isRequested = Boolean(taken && taken.status !== 'Approved'); // pending requests: still open to others
 
       let badge = '';
       if (isBlocked) {
@@ -170,9 +168,9 @@ async function renderTable(resourceValue) {
         const canBook = localStorage.getItem('username') && localStorage.getItem('role') !== 'admin';
         if (canBook) {
             const url = `booking.html?resource=${encodeURIComponent(resourceValue)}&date=${encodeURIComponent(dateStr)}&timeSlot=${encodeURIComponent(slot.value)}`;
-            badge = `<a href="${url}" class="slot-badge-free" style="text-decoration:none;">Free</a>`;
+            badge = `<a href="${url}" class="${isRequested ? 'slot-badge-requested' : 'slot-badge-free'}" style="text-decoration:none;">${isRequested ? 'Requested' : 'Free'}</a>`;
         } else {
-            badge = '<span class="slot-badge-free">Free</span>';
+            badge = isRequested ? '<span class="slot-badge-requested">Requested</span>' : '<span class="slot-badge-free">Free</span>';
         }
       }
       tr.innerHTML += `<td>${badge}</td>`;

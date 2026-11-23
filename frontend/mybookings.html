@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   try {
-      const { data } = await apiFetch(`/bookings?username=${encodeURIComponent(username)}`);
+      const { data } = await apiFetch("/bookings");
       let bookings = Array.isArray(data) ? data : [];
 
       // Sort: Pending first, then Approved/Rejected — newest dates first within each group

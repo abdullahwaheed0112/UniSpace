@@ -160,7 +160,7 @@ if (bookingForm) {
         }
 
         try {
-            const { ok, data: result } = await apiFetch("/bookings", { method: "POST", body: { username, resource, date, timeSlot } });
+            const { ok, data: result } = await apiFetch("/bookings", { method: "POST", body: { resource, date, timeSlot } });
 
             if (ok) {
                 document.getElementById("successMessage").style.display = "block";

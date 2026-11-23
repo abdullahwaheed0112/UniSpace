@@ -148,3 +148,16 @@ body.resources-body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 126, 95, 0.8);
 }
+
+/* A pending request exists for this slot: it can still be requested, so it is amber rather than red */
+.slot-badge-requested {
+    background: rgba(251,191,36,0.15);
+    border: 1px solid rgba(251,191,36,0.35);
+    color: #fbbf24;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}

@@ -84,7 +84,7 @@ async function fetchNotifications() {
     if (!Session.isLoggedIn) return;
 
     try {
-        const { ok, data } = await apiFetch(`/notifications?username=${encodeURIComponent(Session.username)}`);
+        const { ok, data } = await apiFetch("/notifications");
         if (!ok || !Array.isArray(data)) return;
         const notifications = data;
         
@@ -127,7 +127,7 @@ async function markNotificationsRead() {
     
     if (notifBadge && notifBadge.style.display !== "none") {
         try {
-            await apiFetch("/notifications/read", { method: "PUT", body: { username } });
+            await apiFetch("/notifications/read", { method: "PUT" });
             
             notifBadge.style.display = "none";
             
