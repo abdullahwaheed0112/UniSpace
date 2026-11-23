@@ -71,6 +71,9 @@ class TestPermissions:
 
     def test_public_routes(self, client):
         assert client.get("/availability").status_code == 200
+        meta = client.get("/meta").get_json()
+        assert meta["resources"] == ["Conference Room", "Study Room", "Lab", "Auditorium"]
+        assert [s["value"] for s in meta["slots"]] == ["9-10", "10-11", "11-12", "1-2", "2-3", "3-4", "4-5"]
         assert client.get("/blocked_slots").status_code == 200
 
     def test_students_cannot_block_or_unblock(self, client, make_student):

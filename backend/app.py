@@ -5,7 +5,8 @@ import mysql.connector
 import config
 from auth import admin_required, hash_password, issue_token, login_required, student_required, verify_password
 from db import get_db
-from validators import RESOURCES, parse_date, validate_block, validate_booking, validate_signup
+from validators import (BOOKING_WINDOW_DAYS, RESOURCES, SLOT_LABELS, TIME_SLOTS, parse_date, validate_block,
+                        validate_booking, validate_signup)
 from workflow import PENDING, STATUSES, apply_transition, check_transition, record_event, release_slot, roles_for
 
 # Create the Flask app
@@ -210,6 +211,15 @@ def update_booking_status(booking_id):
     finally:
         cursor.close()
         db.close()
+
+# --- META (public) ---
+
+@app.route("/meta", methods=["GET"])
+def meta():
+    """The resources and time slots the system knows about, so the frontend never keeps its own copy of the lists."""
+    slots = [{"value": code, "label": SLOT_LABELS[code], "startHour": hour} for code, hour in TIME_SLOTS.items()]
+    return jsonify({"resources": list(RESOURCES), "slots": slots, "bookingWindowDays": BOOKING_WINDOW_DAYS}), 200
+
 
 # --- AVAILABILITY (public) ---
 
