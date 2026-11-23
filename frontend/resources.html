@@ -1,212 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UniSpace+ Resources</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="resources.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Availability · UniSpace</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="resources-body">
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="site-header"></div>
 
-<div id="navbar"></div>
+    <main id="main">
+        <div class="page-head">
+            <h1>Availability</h1>
+            <p>The next seven days, weekdays only. A slot marked Requested can still be requested: an administrator decides between competing requests.</p>
+        </div>
 
-<div class="container" style="padding-top: 120px;">
-  <h2 class="text-center">Resources</h2>
-</div>
+        <div class="stack">
+            <div class="row between">
+                <div class="segmented" id="resource-picker" role="group" aria-label="Resource"></div>
+                <div class="legend" aria-label="Legend">
+                    <span><span class="cell cell-free">Free</span></span>
+                    <span><span class="cell cell-requested">Requested</span></span>
+                    <span><span class="cell cell-booked">Booked</span></span>
+                    <span><span class="cell cell-blocked">Blocked</span></span>
+                </div>
+            </div>
 
-<div class="container mt-2 pb-5">
-  <div class="resource-selector shadow-lg">
+            <section class="panel" aria-live="polite">
+                <div class="table-wrap">
+                    <table class="avail" id="grid">
+                        <caption class="sr-only" id="grid-caption">Availability</caption>
+                        <thead></thead>
+                        <tbody><tr><td class="empty" colspan="6">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
+            <p class="muted" id="grid-hint"></p>
+        </div>
+    </main>
 
-    <!-- Resource Selector -->
-    <div class="mb-4">
-      <label class="form-label fw-bold" style="color:#feb47b; letter-spacing:0.5px;">Select a Resource</label>
-      <select id="resourceSelect" class="form-select-dark w-100">
-        <option value="">— Choose a resource —</option>
-        <option value="Conference Room">Conference Room</option>
-        <option value="Study Room">Study Room</option>
-        <option value="Lab">Lab</option>
-        <option value="Auditorium">Auditorium</option>
-      </select>
-    </div>
-
-    <!-- Legend -->
-    <div class="d-flex gap-3 flex-wrap mb-4" id="legend" style="display:none!important;">
-      <span><span class="legend-dot" style="background:#28a745;"></span><span class="text-light small">Free</span></span>
-      <span><span class="legend-dot" style="background:#dc3545;"></span><span class="text-light small">Booked</span></span>
-      <span><span class="legend-dot" style="background:#ffc107;"></span><span class="text-light small">Blocked by Admin</span></span>
-    </div>
-
-    <!-- Placeholder -->
-    <div id="tablePlaceholder" class="text-center py-5" style="border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
-      <div style="font-size:2.5rem;">📅</div>
-      <p class="mt-2 text-white">Select a resource above to view availability for the next 7 days.</p>
-    </div>
-
-    <!-- Table -->
-    <div id="tableContainer" class="table-animated-wrapper">
-      <div id="tableWrapper" class="custom-scrollbar" style="overflow-x:auto;">
-        <table class="table table-bordered slot-table" id="availabilityTable">
-          <thead id="tableHead"></thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- CTA -->
-    <div id="bookCta" class="text-center mt-4" style="display:none;">
-      <a href="booking.html" class="btn btn-lg px-5 py-3 fw-bold"
-        style="background: linear-gradient(135deg, #ff7e5f, #feb47b); border:none; color:#fff; border-radius:50px; letter-spacing:1px; box-shadow: 0 8px 20px rgba(255,126,95,0.4); text-decoration:none; transition: transform 0.2s, box-shadow 0.2s;"
-        onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 12px 28px rgba(255,126,95,0.6)'"
-        onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 8px 20px rgba(255,126,95,0.4)'">
-        ＋ Book a Slot
-      </a>
-    </div>
-
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="loadNavbar.js"></script>
-<script src="script.js"></script>
-<script>
-const TIME_SLOTS = [
-  { value: '9-10',  label: '9:00–10:00 AM' },
-  { value: '10-11', label: '10:00–11:00 AM' },
-  { value: '11-12', label: '11:00 AM–12 PM' },
-  { value: '1-2',   label: '1:00–2:00 PM' },
-  { value: '2-3',   label: '2:00–3:00 PM' },
-  { value: '3-4',   label: '3:00–4:00 PM' },
-];
-
-// Resource display name map
-const RESOURCE_LABELS = {
-  'conference-room': 'Conference Room',
-  'study-room': 'Study Room',
-  'lab': 'Lab',
-  'auditorium': 'Auditorium'
-};
-
-// Remove RESOURCE_ADMIN_MAP since values are standard now
-
-function getNext7Days() {
-  const days = [];
-  const today = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
-
-function formatDate(d) {
-  const offset = d.getTimezoneOffset();
-  const localDate = new Date(d.getTime() - (offset * 60 * 1000));
-  return localDate.toISOString().split('T')[0];
-}
-
-async function renderTable(resourceValue) {
-  if (!resourceValue) return;
-
-  const days = getNext7Days();
-
-  let bookings = [];
-  let blocked = [];
-  
-  try {
-      const bRes = await fetch("http://localhost:5000/bookings");
-      bookings = await bRes.json();
-      
-      const bsRes = await fetch("http://localhost:5000/blocked_slots");
-      blocked = await bsRes.json();
-  } catch(err) {
-      console.error("Error fetching resource data:", err);
-  }
-
-  // Build head
-  const thead = document.getElementById('tableHead');
-  thead.innerHTML = '';
-  const headerRow = document.createElement('tr');
-  headerRow.innerHTML = '<th style="min-width:120px;">Time Slot</th>';
-  days.forEach(d => {
-    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    headerRow.innerHTML += `<th>${label}</th>`;
-  });
-  thead.appendChild(headerRow);
-
-  // Build body
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
-  TIME_SLOTS.forEach(slot => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="fw-semibold" style="color:#feb47b; text-align:left; padding-left:12px;">${slot.label}</td>`;
-    days.forEach(d => {
-      const dateStr = formatDate(d);
-      // Check blocked
-      const isBlocked = blocked.some(b =>
-        b.resource === resourceValue &&
-        b.date === dateStr &&
-        b.time === slot.value
-      );
-      // Check booked
-      const isBooked = bookings.some(b =>
-        b.resource === resourceValue &&
-        b.date === dateStr &&
-        b.timeSlot === slot.value &&
-        b.status !== 'Rejected'
-      );
-
-      let badge = '';
-      if (isBlocked) {
-        badge = '<span class="slot-badge-blocked">Blocked</span>';
-      } else if (isBooked) {
-        badge = '<span class="slot-badge-booked">Booked</span>';
-      } else {
-        const canBook = localStorage.getItem('username') && localStorage.getItem('role') !== 'admin';
-        if (canBook) {
-            const url = `booking.html?resource=${encodeURIComponent(resourceValue)}&date=${encodeURIComponent(dateStr)}&timeSlot=${encodeURIComponent(slot.value)}`;
-            badge = `<a href="${url}" class="slot-badge-free" style="text-decoration:none;">Free</a>`;
-        } else {
-            badge = '<span class="slot-badge-free">Free</span>';
-        }
-      }
-      tr.innerHTML += `<td>${badge}</td>`;
-    });
-    tbody.appendChild(tr);
-  });
-
-  document.getElementById('tablePlaceholder').style.display = 'none';
-  
-  const tableContainer = document.getElementById('tableContainer');
-  tableContainer.classList.add('show');
-
-  document.getElementById('legend').style.display = 'flex';
-  
-  // Only show Make a Booking if the user is logged in AND not an admin
-  if (localStorage.getItem('username') && localStorage.getItem('role') !== 'admin') {
-    document.getElementById('bookCta').style.display = 'block';
-  } else {
-    document.getElementById('bookCta').style.display = 'none';
-  }
-}
-
-document.getElementById('resourceSelect').addEventListener('change', function() {
-  if (this.value) {
-    document.getElementById('tableContainer').classList.remove('show');
-    // slight delay for content update before showing again
-    setTimeout(() => {
-        renderTable(this.value);
-    }, 300);
-  } else {
-    document.getElementById('tablePlaceholder').style.display = 'block';
-    document.getElementById('tableContainer').classList.remove('show');
-    document.getElementById('legend').style.display = 'none';
-    document.getElementById('bookCta').style.display = 'none';
-  }
-});
-</script>
+    <div id="site-footer"></div>
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="ui.js"></script>
+    <script src="nav.js"></script>
+    <script src="resources.js"></script>
 </body>
 </html>
