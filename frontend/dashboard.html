@@ -1,323 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>UniSpace+ Dashboard</title>
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="dashboard.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Requests · UniSpace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="site-header"></div>
 
-<!-- Navbar Placeholder -->
-<div id="navbar"></div>
-
-<div class="dashboard-container">
-  <div class="container mb-4">
-    <h2 class="text-center text-white">Admin Dashboard</h2>
-  </div>
-
-  <div class="container d-flex justify-content-center py-4 dashboard-entrance" style="animation-delay: 0.1s;">
-    <div class="dashboard-glass-card shadow-lg p-4 w-100" style="max-width: 900px;">
-      <h3 class="mb-4 text-center">Booking Requests</h3>
-      <div id="bookingsContainer" class="row custom-scrollbar" style="max-height: 600px; overflow-y: auto; padding: 15px;">
-        <!-- Bookings will be populated here as cards -->
-      </div>
-      <p id="noBookings" class="text-center text-muted mt-3" style="display: none;">No booking requests.</p>
-    </div>
-  </div>
-
-  <div class="container d-flex justify-content-center py-4 dashboard-entrance" style="animation-delay: 0.2s;">
-    <div class="dashboard-glass-card shadow-lg p-4 w-100" style="max-width: 900px;">
-      <h3 class="mb-4 text-center">Admin Actions</h3>
-      <div class="d-flex gap-2 mb-4" id="adminTabs" role="tablist">
-        <button class="tab-btn active flex-fill py-2 fw-semibold rounded-3" id="block-tab" data-bs-toggle="tab" data-bs-target="#block" type="button" role="tab"
-            style="background: linear-gradient(135deg,#ff7e5f,#feb47b); border:none; color:#fff; letter-spacing:0.5px; transition: opacity 0.2s;">
-            Block Time Slots
-        </button>
-        <button class="tab-btn flex-fill py-2 fw-semibold rounded-3" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab"
-            style="background: rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15); color:#bbb; letter-spacing:0.5px; transition: all 0.2s;">
-            View Reports
-        </button>
-    </div>
-    <div class="tab-content mt-3" id="adminTabsContent">
-      <div class="tab-pane fade show active" id="block" role="tabpanel">
-        <form id="blockForm">
-          <div class="mb-3">
-            <label for="blockResource" class="form-label">Resource</label>
-            <select class="form-select form-select-dark" id="blockResource" required>
-              <option value="">Choose resource</option>
-              <option value="Conference Room">Conference Room</option>
-              <option value="Study Room">Study Room</option>
-              <option value="Lab">Lab</option>
-              <option value="Auditorium">Auditorium</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="blockDate" class="form-label">Date</label>
-            <input type="date" class="form-control" id="blockDate" required style="background: rgba(30,30,30,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px;" min="">
-            <script>document.getElementById('blockDate').min = new Date().toISOString().split('T')[0];</script>
-          </div>
-          <div class="mb-3">
-            <label for="blockTime" class="form-label">Time Slot</label>
-            <select class="form-select form-select-dark" id="blockTime" required>
-              <option value="">Choose time slot</option>
-              <option value="9-10">9:00 AM - 10:00 AM</option>
-              <option value="10-11">10:00 AM - 11:00 AM</option>
-              <option value="11-12">11:00 AM - 12:00 PM</option>
-              <option value="1-2">1:00 PM - 2:00 PM</option>
-              <option value="2-3">2:00 PM - 3:00 PM</option>
-              <option value="3-4">3:00 PM - 4:00 PM</option>
-              <option value="4-5">4:00 PM - 5:00 PM</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-fancy-submit px-4">
-            <i class="fa-solid fa-lock me-2"></i>Block Slot
-          </button>
-          <span id="blockMessage" style="display:none; color:#4ade80; margin-left:15px; font-weight:bold;">
-            <i class="fa-solid fa-check me-1"></i>Slot blocked!
-          </span>
-        </form>
-        <div id="blockedSlots" class="mt-4">
-          <h5 class="fw-bold mb-3" style="color: #feb47b;">Blocked Slots</h5>
-          <div id="blockedContainer" class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
-            <!-- Blocked slots will be displayed here -->
-          </div>
+    <main id="main">
+        <div class="page-head">
+            <h1>Booking requests</h1>
+            <p>Take a request into review, then approve or reject it. Approving one request declines the others for the same slot.</p>
         </div>
-      </div>
-      <div class="tab-pane fade" id="reports" role="tabpanel">
-        <div class="row g-4 mt-1">
-            <div class="col-6">
-                <div class="report-stat-card">
-                    <div class="stat-value" style="background: linear-gradient(135deg,#ff7e5f,#feb47b); -webkit-background-clip:text; -webkit-text-fill-color:transparent;" id="totalBookings">0</div>
-                    <div class="small mt-1 fw-bold text-uppercase opacity-75">Total Bookings</div>
-                </div> 
-            </div>
-            <div class="col-6">
-                <div class="report-stat-card" style="border-color: rgba(74, 222, 128, 0.2);">
-                    <div class="stat-value" style="color:#4ade80;" id="approvedBookings">0</div>
-                    <div class="small mt-1 fw-bold text-uppercase opacity-75">Approved</div>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="report-stat-card" style="border-color: rgba(248, 113, 113, 0.2);">
-                    <div class="stat-value" style="color:#f87171;" id="rejectedBookings">0</div>
-                    <div class="small mt-1 fw-bold text-uppercase opacity-75">Rejected</div>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="report-stat-card" style="border-color: rgba(251, 191, 36, 0.2);">
-                    <div class="stat-value" style="color:#fbbf24;" id="pendingBookings">0</div>
-                    <div class="small mt-1 fw-bold text-uppercase opacity-75">Pending</div>
-                </div>
+
+        <div id="message" class="notice" role="status" aria-live="polite" style="margin-bottom: 16px;"></div>
+
+        <div class="cols two-one">
+            <section class="panel" aria-labelledby="queue-title">
+                <header>
+                    <h2 id="queue-title">Requests</h2>
+                    <div class="segmented" id="filter" role="group" aria-label="Filter by status"></div>
+                </header>
+                <div id="queue"><p class="empty">Loading…</p></div>
+            </section>
+
+            <div class="stack">
+                <section class="panel" aria-labelledby="glance-title">
+                    <header><h2 id="glance-title">At a glance</h2></header>
+                    <div class="body"><dl id="glance" class="stack" style="margin:0"></dl></div>
+                </section>
+
+                <section class="panel" aria-labelledby="block-title">
+                    <header><h2 id="block-title">Maintenance blocks</h2></header>
+                    <div class="body stack">
+                        <p class="muted">Blocking a slot rejects open requests for it and cancels an approved booking. Students are notified.</p>
+                        <form id="blockForm" class="stack" novalidate>
+                            <div class="field"><label for="blockResource">Resource</label><select id="blockResource" required></select></div>
+                            <div class="field"><label for="blockDate">Date</label><input type="date" id="blockDate" required></div>
+                            <div class="field"><label for="blockTime">Time slot</label><select id="blockTime" required></select></div>
+                            <button type="submit" class="btn btn-primary">Block this slot</button>
+                        </form>
+                        <div id="blocked"></div>
+                    </div>
+                </section>
             </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
+    </main>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="config.js"></script>
-<script src="api.js"></script>
-<script src="ui.js"></script>
-<script src="loadNavbar.js"></script>
-<script src="script.js"></script>
-
-<script>
-// Load and display bookings for admin
-document.addEventListener("DOMContentLoaded", function () {
-  const bookingsContainer = document.getElementById("bookingsContainer");
-  const noBookings = document.getElementById("noBookings");
-
-  let allBookings = [];
-
-  async function loadBookings() {
-    bookingsContainer.innerHTML = '';
-    try {
-        const { data } = await apiFetch("/bookings");
-        allBookings = Array.isArray(data) ? data : [];
-
-        // Sort: Pending first, then Approved/Rejected — newest dates first within each group
-        allBookings.sort((a, b) => {
-          const aPending = a.status === 'Pending' ? 0 : 1;
-          const bPending = b.status === 'Pending' ? 0 : 1;
-          if (aPending !== bPending) return aPending - bPending;
-          return new Date(b.date) - new Date(a.date);
-        });
-
-        if (allBookings.length === 0) {
-          noBookings.style.display = 'block';
-        } else {
-          noBookings.style.display = 'none';
-          allBookings.forEach((booking, index) => {
-            const formattedDate = new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-            const colDiv = document.createElement('div');
-            colDiv.className = 'col-md-6 mb-3';
-            colDiv.setAttribute('data-id', booking.id);
-            colDiv.innerHTML = `
-              <div class="request-card">
-                <div class="card-body p-0">
-                  <h5 class="fw-bold" style="color: #feb47b;">${escapeHtml(booking.resource)}</h5>
-                  <p class="mb-1"><small class="opacity-75">Requested by: ${escapeHtml(booking.username)}</small></p>
-                  <p class="mb-1"><strong>Date:</strong> ${escapeHtml(formattedDate)}</p>
-                  <p class="mb-2"><strong>Slot:</strong> ${escapeHtml(booking.timeSlot)}</p>
-                  <p class="mb-3"><strong>Status:</strong> <span class="badge ${getBadgeClass(booking.status)}">${escapeHtml(booking.status)}</span></p>
-                </div>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-success btn-sm flex-fill approve-btn" ${booking.status !== 'Pending' ? 'disabled' : ''}>Approve</button>
-                  <button class="btn btn-danger btn-sm flex-fill reject-btn" ${booking.status !== 'Pending' ? 'disabled' : ''}>Reject</button>
-                </div>
-              </div>
-            `;
-            bookingsContainer.appendChild(colDiv);
-
-            // Staggered entry animation
-            const cardItem = colDiv.querySelector('.request-card');
-            setTimeout(() => {
-                cardItem.classList.add('is-visible');
-            }, index * 100);
-          });
-
-          // Add event listeners
-          document.querySelectorAll('.approve-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-              const id = this.closest('[data-id]').getAttribute('data-id');
-              updateStatus(id, 'Approved');
-            });
-          });
-          document.querySelectorAll('.reject-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-              const id = this.closest('[data-id]').getAttribute('data-id');
-              updateStatus(id, 'Rejected');
-            });
-          });
-        }
-        loadReports();
-    } catch(err) {
-        console.error("Failed to load bookings", err);
-    }
-  }
-
-  async function updateStatus(id, status) {
-    try {
-        await apiFetch(`/bookings/${id}/status`, { method: "PUT", body: { status } });
-        loadBookings(); // Refresh the display & reports
-    } catch(err) {
-        console.error("Failed to update status", err);
-    }
-  }
-
-  function getBadgeClass(status) {
-    switch(status) {
-      case 'Approved': return 'bg-success';
-      case 'Rejected': return 'bg-danger';
-      default: return 'bg-warning';
-    }
-  }
-
-  // Block slots
-  const blockForm = document.getElementById('blockForm');
-  const blockedContainer = document.getElementById('blockedContainer');
-
-  async function loadBlockedSlots() {
-    blockedContainer.innerHTML = '';
-    try {
-        const { data } = await apiFetch("/blocked_slots");
-        const blocked = Array.isArray(data) ? data : [];
-        
-        if (blocked.length === 0) {
-            blockedContainer.innerHTML = '<p style="color: #fff; font-size: 1.05rem;">No slots currently blocked.</p>';
-            return;
-        }
-
-        blocked.forEach(slot => {
-          const row = document.createElement('div');
-          row.className = 'd-flex align-items-center justify-content-between mb-2 px-3 py-2 rounded-3';
-          row.style.cssText = 'background: rgba(33,37,41,0.85); border: 1px solid rgba(255,255,255,0.1); width:100%;';
-          row.innerHTML = `
-            <div class="d-flex gap-3 align-items-center flex-wrap">
-              <span class="fw-bold" style="color:#feb47b;">${escapeHtml(slot.resource)}</span>
-              <span  class="small" style="color:#fff;">${new Date(slot.date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</span>
-              <span class="badge" style="background:rgba(255,126,95,0.3); color:#ff7e5f;">${escapeHtml(slot.time)}</span>
-            </div>
-            <button class="btn btn-sm unblock-btn" data-id="${escapeHtml(slot.id)}" style="background:rgba(220,53,69,0.2); border:1px solid rgba(220,53,69,0.4); color:#ff6b6b; border-radius:8px; font-size:0.75rem; padding:3px 10px;">Unblock</button>
-          `;
-          blockedContainer.appendChild(row);
-        });
-
-        document.querySelectorAll('.unblock-btn').forEach(btn => {
-          btn.addEventListener('click', async function() {
-            const id = this.getAttribute('data-id');
-            try {
-                await apiFetch(`/blocked_slots/${id}`, { method: "DELETE" });
-                loadBlockedSlots();
-            } catch(err) { console.error("Could not unblock", err); }
-          });
-        });
-    } catch(err) {
-        console.error("Failed to load blocked slots", err);
-    }
-  }
-
-  blockForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const resource = document.getElementById('blockResource').value;
-    const date = document.getElementById('blockDate').value;
-    const time = document.getElementById('blockTime').value;
-    if (resource && date && time) {
-        try {
-            await apiFetch("/blocked_slots", { method: "POST", body: { resource, date, time } });
-
-            loadBlockedSlots();
-            loadBookings(); // A block auto-rejects pending bookings, so reload them
-            blockForm.reset();
-            const blockMessage = document.getElementById('blockMessage');
-            blockMessage.style.display = 'inline';
-            setTimeout(() => blockMessage.style.display = 'none', 2000);
-        } catch(err) {
-            console.error(err);
-        }
-    }
-  });
-
-  // Reports
-  function loadReports() {
-    const total = allBookings.length;
-    const approved = allBookings.filter(b => b.status === 'Approved').length;
-    const rejected = allBookings.filter(b => b.status === 'Rejected').length;
-    const pending = allBookings.filter(b => b.status === 'Pending').length;
-    document.getElementById('totalBookings').textContent = total;
-    document.getElementById('approvedBookings').textContent = approved;
-    document.getElementById('rejectedBookings').textContent = rejected;
-    document.getElementById('pendingBookings').textContent = pending;
-  }
-
-  loadBookings();
-  loadBlockedSlots();
-});
-</script>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="script.js"></script>
-
-<script>
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('shown.bs.tab', function() {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
-  });
-});
-</script>
-
+    <div id="site-footer"></div>
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="ui.js"></script>
+    <script src="nav.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html>
