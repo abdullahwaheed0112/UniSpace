@@ -19,7 +19,7 @@ function updateNavbarLinks() {
     
     // Set greeting
     if (navGreeting && loggedInUser) {
-        navGreeting.innerHTML = `<span class="welcome-text"> Hello, ${loggedInUser}!</span>`;
+        navGreeting.innerHTML = `<span class="welcome-text"> Hello, ${escapeHtml(loggedInUser)}!</span>`;
         navGreeting.style.display = "block";
     } else if (navGreeting) {
         navGreeting.style.display = "none";
@@ -110,8 +110,8 @@ async function fetchNotifications() {
                 const li = document.createElement("li");
                 li.className = `notif-item ${!n.is_read ? 'unread' : ''}`;
                 li.innerHTML = `
-                    ${n.message}
-                    <span class="notif-date">${n.date}</span>
+                    ${escapeHtml(n.message)}
+                    <span class="notif-date">${escapeHtml(n.date)}</span>
                 `;
                 notifMenu.appendChild(li);
             });
