@@ -1,9 +1,9 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import mysql.connector
 
 import config
-from auth import hash_password, issue_token, read_token, verify_password
+from auth import admin_required, hash_password, issue_token, login_required, student_required, verify_password
 from db import get_db
 
 # Create the Flask app
@@ -81,30 +81,18 @@ def signin():
 
 # Route: GET /me  (who does this token belong to?)
 @app.route("/me", methods=["GET"])
+@login_required
 def me():
-    header = request.headers.get("Authorization", "")
-    token = header[7:] if header.startswith("Bearer ") else ""
-    user_id = read_token(token)
-    if user_id is None:
-        return jsonify({"message": "Not signed in or the session has expired."}), 401
-
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("SELECT username, role FROM users WHERE id = %s", (user_id,))
-    row = cursor.fetchone()
-    cursor.close()
-    db.close()
-    if not row:
-        return jsonify({"message": "Account no longer exists."}), 401
-    return jsonify({"username": row[0], "role": row[1]}), 200
+    return jsonify({"username": g.user["username"], "role": g.user["role"]}), 200
 
 
 # --- BOOKINGS API ---
 
 @app.route("/bookings", methods=["POST"])
+@student_required
 def create_booking():
     data = request.get_json()
-    username = data.get("username")
+    username = g.user["username"]  # from the verified token, never from the request body
     resource = data.get("resource")
     booking_date = data.get("date")
     time_slot = data.get("timeSlot")
@@ -132,8 +120,10 @@ def create_booking():
         db.close()
 
 @app.route("/bookings", methods=["GET"])
+@login_required
 def get_bookings():
-    username = request.args.get("username") # Optional: filter by username for students
+    # Admins see every booking; a student only ever sees their own (any ?username= in the URL is ignored)
+    username = g.user["username"] if g.user["role"] != "admin" else None
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -152,6 +142,7 @@ def get_bookings():
     return jsonify(bookings), 200
 
 @app.route("/bookings/<int:booking_id>/status", methods=["PUT"])
+@admin_required
 def update_booking_status(booking_id):
     data = request.get_json()
     new_status = data.get("status")
@@ -178,9 +169,50 @@ def update_booking_status(booking_id):
         cursor.close()
         db.close()
 
+# --- AVAILABILITY (public) ---
+
+@app.route("/availability", methods=["GET"])
+def availability():
+    """Which slots have a request or an approved booking, without revealing who made it.
+
+    Public on purpose: visitors can see the grid, but no usernames leave the server.
+    Query: ?resource=Lab&from=2026-11-23&to=2026-11-29 (all three optional).
+    """
+    resource = request.args.get("resource")
+    date_from = request.args.get("from")
+    date_to = request.args.get("to")
+
+    sql = ("SELECT resource, DATE_FORMAT(booking_date, '%Y-%m-%d') AS date, time_slot AS timeSlot, "
+           "IF(MAX(status = 'Approved') = 1, 'Approved', 'Pending') AS status "
+           "FROM bookings WHERE status IN ('Pending', 'Approved')")
+    params = []
+    if resource:
+        sql += " AND resource = %s"
+        params.append(resource)
+    if date_from:
+        sql += " AND booking_date >= %s"
+        params.append(date_from)
+    if date_to:
+        sql += " AND booking_date <= %s"
+        params.append(date_to)
+    sql += " GROUP BY resource, booking_date, time_slot ORDER BY booking_date ASC"
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute(sql, params)
+        return jsonify(cursor.fetchall()), 200
+    except mysql.connector.Error:
+        return jsonify({"message": "Invalid filter."}), 400
+    finally:
+        cursor.close()
+        db.close()
+
+
 # --- BLOCKED SLOTS API ---
 
 @app.route("/blocked_slots", methods=["POST"])
+@admin_required
 def block_slot():
     data = request.get_json()
     resource = data.get("resource")
@@ -229,6 +261,7 @@ def get_blocked_slots():
     return jsonify(blocked_slots), 200
 
 @app.route("/blocked_slots/<int:slot_id>", methods=["DELETE"])
+@admin_required
 def unblock_slot(slot_id):
     db = get_db()
     cursor = db.cursor()
@@ -247,11 +280,10 @@ def unblock_slot(slot_id):
 # --- NOTIFICATIONS API ---
 
 @app.route("/notifications", methods=["GET"])
+@login_required
 def get_notifications():
-    username = request.args.get("username")
-    if not username:
-        return jsonify({"message": "Username required"}), 400
-        
+    username = g.user["username"]  # always the caller's own notifications
+
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
@@ -264,13 +296,10 @@ def get_notifications():
     return jsonify(notifications), 200
 
 @app.route("/notifications/read", methods=["PUT"])
+@login_required
 def mark_notifications_read():
-    data = request.get_json()
-    username = data.get("username")
-    
-    if not username:
-        return jsonify({"message": "Username required"}), 400
-        
+    username = g.user["username"]
+
     db = get_db()
     cursor = db.cursor()
     
