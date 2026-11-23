@@ -16,15 +16,9 @@ form.addEventListener("submit", async function (e) {
     }
 
     // Send sign-up data to the backend
-    const response = await fetch("http://localhost:5000/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password })
-    });
+    const { ok, data: result } = await apiFetch("/signup", { method: "POST", body: { username, email, password }, auth: false });
 
-    const result = await response.json();
-
-    if (response.ok) {
+    if (ok) {
         message.textContent = result.message;
         message.className = "success";
         form.reset();

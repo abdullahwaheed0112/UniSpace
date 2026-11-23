@@ -10,17 +10,10 @@ if (signinForm) {
         const password = document.getElementById("password").value;
 
         try {
-            const response = await fetch("http://localhost:5000/signin", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
-            });
+            const { ok, data: result } = await apiFetch("/signin", { method: "POST", body: { email, password }, auth: false });
 
-            const result = await response.json();
-
-            if (response.ok) {
-                localStorage.setItem("username", result.username);
-                localStorage.setItem("role", result.role);
+            if (ok) {
+                Session.save(result);
 
                 message.textContent = result.message;
                 message.className = "success";
@@ -137,9 +130,8 @@ if (dateSelect && timeSlotSelect) {
 
     // Fetch blocked slots to disable submitting early
     window.blockedSlots = [];
-    fetch("http://localhost:5000/blocked_slots")
-        .then(res => res.json())
-        .then(data => { window.blockedSlots = data; })
+    apiFetch("/blocked_slots", { auth: false })
+        .then(({ data }) => { window.blockedSlots = Array.isArray(data) ? data : []; })
         .catch(err => console.error(err));
 }
 
@@ -168,14 +160,9 @@ if (bookingForm) {
         }
 
         try {
-            const response = await fetch("http://localhost:5000/bookings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, resource, date, timeSlot })
-            });
-            const result = await response.json();
+            const { ok, data: result } = await apiFetch("/bookings", { method: "POST", body: { username, resource, date, timeSlot } });
 
-            if (response.ok) {
+            if (ok) {
                 document.getElementById("successMessage").style.display = "block";
                 setTimeout(() => { window.location.href = "mybookings.html"; }, 1500);
             } else {

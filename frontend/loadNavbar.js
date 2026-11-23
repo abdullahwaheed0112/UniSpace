@@ -75,19 +75,18 @@ function updateNavbarLinks() {
 
 // Logout function
 function logout() {
-    localStorage.removeItem("username");
-    localStorage.removeItem("role");
+    Session.clear();
     window.location.href = "index.html"; // Redirect to home
 }
 
 // Notifications functions
 async function fetchNotifications() {
-    const username = localStorage.getItem("username");
-    if (!username) return;
-    
+    if (!Session.isLoggedIn) return;
+
     try {
-        const response = await fetch(`http://localhost:5000/notifications?username=${username}`);
-        const notifications = await response.json();
+        const { ok, data } = await apiFetch(`/notifications?username=${encodeURIComponent(Session.username)}`);
+        if (!ok || !Array.isArray(data)) return;
+        const notifications = data;
         
         const notifBadge = document.getElementById("notifBadge");
         const notifMenu = document.getElementById("notifMenu");
@@ -128,11 +127,7 @@ async function markNotificationsRead() {
     
     if (notifBadge && notifBadge.style.display !== "none") {
         try {
-            await fetch(`http://localhost:5000/notifications/read`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username })
-            });
+            await apiFetch("/notifications/read", { method: "PUT", body: { username } });
             
             notifBadge.style.display = "none";
             

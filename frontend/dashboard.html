@@ -125,6 +125,8 @@
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="config.js"></script>
+<script src="api.js"></script>
 <script src="loadNavbar.js"></script>
 <script src="script.js"></script>
 
@@ -139,8 +141,8 @@ document.addEventListener("DOMContentLoaded", function () {
   async function loadBookings() {
     bookingsContainer.innerHTML = '';
     try {
-        const response = await fetch("http://localhost:5000/bookings");
-        allBookings = await response.json();
+        const { data } = await apiFetch("/bookings");
+        allBookings = Array.isArray(data) ? data : [];
 
         // Sort: Pending first, then Approved/Rejected — newest dates first within each group
         allBookings.sort((a, b) => {
@@ -205,11 +207,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function updateStatus(id, status) {
     try {
-        await fetch(`http://localhost:5000/bookings/${id}/status`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status })
-        });
+        await apiFetch(`/bookings/${id}/status`, { method: "PUT", body: { status } });
         loadBookings(); // Refresh the display & reports
     } catch(err) {
         console.error("Failed to update status", err);
@@ -231,8 +229,8 @@ document.addEventListener("DOMContentLoaded", function () {
   async function loadBlockedSlots() {
     blockedContainer.innerHTML = '';
     try {
-        const response = await fetch("http://localhost:5000/blocked_slots");
-        const blocked = await response.json();
+        const { data } = await apiFetch("/blocked_slots");
+        const blocked = Array.isArray(data) ? data : [];
         
         if (blocked.length === 0) {
             blockedContainer.innerHTML = '<p style="color: #fff; font-size: 1.05rem;">No slots currently blocked.</p>';
@@ -258,7 +256,7 @@ document.addEventListener("DOMContentLoaded", function () {
           btn.addEventListener('click', async function() {
             const id = this.getAttribute('data-id');
             try {
-                await fetch(`http://localhost:5000/blocked_slots/${id}`, { method: "DELETE" });
+                await apiFetch(`/blocked_slots/${id}`, { method: "DELETE" });
                 loadBlockedSlots();
             } catch(err) { console.error("Could not unblock", err); }
           });
@@ -275,11 +273,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const time = document.getElementById('blockTime').value;
     if (resource && date && time) {
         try {
-            await fetch("http://localhost:5000/blocked_slots", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ resource, date, time })
-            });
+            await apiFetch("/blocked_slots", { method: "POST", body: { resource, date, time } });
 
             loadBlockedSlots();
             loadBookings(); // A block auto-rejects pending bookings, so reload them
