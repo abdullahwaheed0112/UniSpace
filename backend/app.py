@@ -2,9 +2,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
 
+import config
+from db import get_db
+
 # Create the Flask app
 app = Flask(__name__)
-CORS(app)  # Allow frontend (Live Server) to talk to this backend
+CORS(app, origins=config.CORS_ORIGINS)  # only the configured frontend origins may call the API
 
 
 # Route: POST /signup
@@ -18,12 +21,7 @@ def signup():
     password = data["password"]
 
     # Connect to MySQL
-    db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="123456",
-        database="unispace"
-    )
+    db = get_db()
 
     cursor = db.cursor()
 
@@ -51,12 +49,7 @@ def signin():
     password = data["password"]
 
     # Connect to MySQL
-    db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="123456",
-        database="unispace"
-    )
+    db = get_db()
 
     cursor = db.cursor()
 
@@ -89,9 +82,7 @@ def create_booking():
     booking_date = data.get("date")
     time_slot = data.get("timeSlot")
 
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor()
 
     # Check if slot is blocked
@@ -117,9 +108,7 @@ def create_booking():
 def get_bookings():
     username = request.args.get("username") # Optional: filter by username for students
 
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor(dictionary=True)
 
     if username:
@@ -140,9 +129,7 @@ def update_booking_status(booking_id):
     data = request.get_json()
     new_status = data.get("status")
 
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor()
 
     sql = "UPDATE bookings SET status = %s WHERE id = %s"
@@ -173,9 +160,7 @@ def block_slot():
     blocked_date = data.get("date")
     time_slot = data.get("time")
 
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor()
 
     sql = "INSERT INTO blocked_slots (resource, blocked_date, time_slot) VALUES (%s, %s, %s)"
@@ -205,9 +190,7 @@ def block_slot():
 
 @app.route("/blocked_slots", methods=["GET"])
 def get_blocked_slots():
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor(dictionary=True)
 
     sql = "SELECT id, resource, DATE_FORMAT(blocked_date, '%Y-%m-%d') as date, time_slot as time FROM blocked_slots ORDER BY blocked_date ASC"
@@ -220,9 +203,7 @@ def get_blocked_slots():
 
 @app.route("/blocked_slots/<int:slot_id>", methods=["DELETE"])
 def unblock_slot(slot_id):
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor()
 
     sql = "DELETE FROM blocked_slots WHERE id = %s"
@@ -244,9 +225,7 @@ def get_notifications():
     if not username:
         return jsonify({"message": "Username required"}), 400
         
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor(dictionary=True)
     
     sql = "SELECT id, message, is_read, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as date FROM notifications WHERE username = %s ORDER BY created_at DESC"
@@ -265,9 +244,7 @@ def mark_notifications_read():
     if not username:
         return jsonify({"message": "Username required"}), 400
         
-    db = mysql.connector.connect(
-        host="localhost", user="root", password="123456", database="unispace"
-    )
+    db = get_db()
     cursor = db.cursor()
     
     sql = "UPDATE notifications SET is_read = TRUE WHERE username = %s AND is_read = FALSE"
@@ -283,4 +260,4 @@ def mark_notifications_read():
 
 # Run the server
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)
