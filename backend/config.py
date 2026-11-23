@@ -3,7 +3,9 @@
 Copy `.env.example` to `.env` and edit it; the file is loaded automatically if python-dotenv is installed.
 Nothing in this file is a secret: real values belong in the environment, never in git.
 """
+import logging
 import os
+import secrets
 from pathlib import Path
 
 try:  # optional convenience: load backend/../.env if python-dotenv is available
@@ -37,3 +39,13 @@ CORS_ORIGINS = [
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:5500,http://127.0.0.1:5500").split(",")
     if o.strip()
 ]
+
+# --- Login tokens ---
+# Tokens are signed with SECRET_KEY. Set it in the environment (e.g. `python -c "import secrets; print(secrets.token_hex(32))"`).
+# If it is missing, a random key is generated for this run only: the app works, but every restart signs everyone out.
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
+    logging.getLogger(__name__).warning("SECRET_KEY is not set: using a temporary key, logins will not survive a restart.")
+
+TOKEN_MAX_AGE_SECONDS = int(os.environ.get("TOKEN_MAX_AGE_SECONDS", str(8 * 60 * 60)))  # 8 hours

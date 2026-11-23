@@ -3,7 +3,7 @@ from flask_cors import CORS
 import mysql.connector
 
 import config
-from auth import hash_password, verify_password
+from auth import hash_password, issue_token, read_token, verify_password
 from db import get_db
 
 # Create the Flask app
@@ -72,10 +72,31 @@ def signin():
         return jsonify({
             "message": f"Welcome back, {user[1]}!",
             "username": user[1],
-            "role": user[3]
+            "role": user[3],
+            "token": issue_token(user[0])
         }), 200
     else:
         return jsonify({"message": "Invalid email or password!"}), 401
+
+
+# Route: GET /me  (who does this token belong to?)
+@app.route("/me", methods=["GET"])
+def me():
+    header = request.headers.get("Authorization", "")
+    token = header[7:] if header.startswith("Bearer ") else ""
+    user_id = read_token(token)
+    if user_id is None:
+        return jsonify({"message": "Not signed in or the session has expired."}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT username, role FROM users WHERE id = %s", (user_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    db.close()
+    if not row:
+        return jsonify({"message": "Account no longer exists."}), 401
+    return jsonify({"username": row[0], "role": row[1]}), 200
 
 
 # --- BOOKINGS API ---

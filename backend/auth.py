@@ -1,7 +1,10 @@
-"""Password hashing (and, in later commits, login tokens and permission checks)."""
+"""Password hashing and signed login tokens (permission checks are added in a later commit)."""
 import hmac
 
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
+
+import config
 
 # Werkzeug hashes look like "scrypt:32768:8:1$<salt>$<hash>" (or "pbkdf2:sha256:...$...$...").
 _HASH_PREFIXES = ("scrypt:", "pbkdf2:")
@@ -33,3 +36,23 @@ def verify_password(stored, supplied):
     # Legacy plain-text row: compare in constant time, then ask the caller to upgrade it.
     ok = hmac.compare_digest(stored.encode("utf-8"), supplied.encode("utf-8"))
     return ok, ok
+
+
+# --- Login tokens ---
+_serializer = URLSafeTimedSerializer(config.SECRET_KEY, salt="unispace-login")
+
+
+def issue_token(user_id):
+    """Return a signed, time-limited token that identifies a user. It carries only the user id."""
+    return _serializer.dumps({"uid": user_id})
+
+
+def read_token(token):
+    """Return the user id inside a valid token, or None if it is missing, forged or expired."""
+    if not token:
+        return None
+    try:
+        payload = _serializer.loads(token, max_age=config.TOKEN_MAX_AGE_SECONDS)
+    except (BadSignature, SignatureExpired):
+        return None
+    return payload.get("uid") if isinstance(payload, dict) else None
