@@ -6,6 +6,7 @@ import config
 from auth import admin_required, hash_password, issue_token, login_required, student_required, verify_password
 from db import get_db
 from validators import RESOURCES, parse_date, validate_block, validate_booking, validate_signup
+from workflow import PENDING, STATUSES, apply_transition, check_transition, record_event, release_slot, roles_for
 
 # Create the Flask app
 app = Flask(__name__)
@@ -108,10 +109,12 @@ def create_booking():
             return jsonify({"message": "This slot has been blocked by the administration."}), 400
 
         cursor.execute("INSERT INTO bookings (username, resource, booking_date, time_slot, status) "
-                       "VALUES (%s, %s, %s, %s, 'Pending')", (username, resource, booking_date, time_slot))
+                       "VALUES (%s, %s, %s, %s, %s)", (username, resource, booking_date, time_slot, PENDING))
+        record_event(cursor, cursor.lastrowid, None, PENDING, username)
         db.commit()
         return jsonify({"message": "Booking successful!"}), 201
     except mysql.connector.IntegrityError:
+        db.rollback()
         return jsonify({"message": "You already have a request or booking for this slot."}), 409
     except mysql.connector.Error:
         db.rollback()
@@ -125,46 +128,78 @@ def create_booking():
 @login_required
 def get_bookings():
     # Admins see every booking; a student only ever sees their own (any ?username= in the URL is ignored)
-    username = g.user["username"] if g.user["role"] != "admin" else None
+    sql = ("SELECT id, username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') AS date, time_slot AS timeSlot, "
+           "status, decision_note AS note, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') AS createdAt FROM bookings")
+    params = ()
+    if g.user["role"] != "admin":
+        sql += " WHERE username = %s"
+        params = (g.user["username"],)
+    sql += " ORDER BY booking_date ASC, time_slot ASC"
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute(sql, params)
+        return jsonify(cursor.fetchall()), 200
+    finally:
+        cursor.close()
+        db.close()
 
-    if username:
-        sql = "SELECT id, username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') as date, time_slot as timeSlot, status FROM bookings WHERE username = %s ORDER BY booking_date ASC"
-        cursor.execute(sql, (username,))
-    else:
-        sql = "SELECT id, username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') as date, time_slot as timeSlot, status FROM bookings ORDER BY booking_date ASC"
-        cursor.execute(sql)
 
-    bookings = cursor.fetchall()
-    
-    cursor.close()
-    db.close()
-    return jsonify(bookings), 200
+@app.route("/bookings/<int:booking_id>", methods=["GET"])
+@login_required
+def get_booking(booking_id):
+    """One booking with its history (the audit trail). Only the owner and admins can see it."""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id, username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') AS date, "
+                       "time_slot AS timeSlot, status, decision_note AS note FROM bookings WHERE id = %s", (booking_id,))
+        booking = cursor.fetchone()
+        if not booking or (g.user["role"] != "admin" and booking["username"] != g.user["username"]):
+            return jsonify({"message": "Booking not found."}), 404  # same answer for "not yours" and "does not exist"
+
+        cursor.execute("SELECT from_status AS fromStatus, to_status AS toStatus, actor, note, "
+                       "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') AS at FROM booking_events "
+                       "WHERE booking_id = %s ORDER BY created_at ASC, id ASC", (booking_id,))
+        booking["history"] = cursor.fetchall()
+        return jsonify(booking), 200
+    finally:
+        cursor.close()
+        db.close()
 
 @app.route("/bookings/<int:booking_id>/status", methods=["PUT"])
-@admin_required
+@login_required
 def update_booking_status(booking_id):
+    """Move a booking through the workflow (see backend/workflow.py). Body: {"status": "...", "note": "..."}."""
     data = request.get_json(silent=True) or {}
-    new_status = data.get("status")
-    if new_status not in ("Approved", "Rejected"):
-        return jsonify({"message": "Status must be Approved or Rejected."}), 400
+    target = data.get("status")
+    note = data.get("note")
+    if target not in STATUSES:
+        return jsonify({"message": "Unknown status."}), 400
+    if note is not None and not isinstance(note, str):
+        return jsonify({"message": "The reason must be text."}), 400
 
     db = get_db()
     cursor = db.cursor()
     try:
-        cursor.execute("SELECT username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') FROM bookings WHERE id = %s",
-                       (booking_id,))
-        booking = cursor.fetchone()
-        if not booking:
+        # Lock the row so two admins cannot decide the same booking at the same moment
+        cursor.execute("SELECT id, username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d'), time_slot, status "
+                       "FROM bookings WHERE id = %s FOR UPDATE", (booking_id,))
+        row = cursor.fetchone()
+        booking = dict(zip(("id", "username", "resource", "date", "time_slot", "status"), row)) if row else None
+        roles = roles_for(g.user, booking) if booking else set()
+        if not roles:  # no such booking, or somebody else's: the same answer for both
             return jsonify({"message": "Booking not found."}), 404
 
-        cursor.execute("UPDATE bookings SET status = %s WHERE id = %s", (new_status, booking_id))
-        msg = f"Your booking for {booking[1]} on {booking[2]} has been {new_status}."
-        cursor.execute("INSERT INTO notifications (username, message) VALUES (%s, %s)", (booking[0], msg))
+        problem = check_transition(booking["status"], target, roles, note)
+        if problem:
+            return jsonify({"message": problem[1]}), problem[0]
+
+        changed = apply_transition(cursor, booking, target, g.user["username"], note)
         db.commit()
-        return jsonify({"message": f"Booking {booking_id} updated to {new_status}"}), 200
+        return jsonify({"message": f"Booking {booking_id} is now {target}.", "status": target,
+                        "alsoRejected": len(changed)}), 200
     except mysql.connector.IntegrityError:
         db.rollback()
         return jsonify({"message": "Another booking is already approved for that slot."}), 409
@@ -195,7 +230,7 @@ def availability():
 
     sql = ("SELECT resource, DATE_FORMAT(booking_date, '%Y-%m-%d') AS date, time_slot AS timeSlot, "
            "IF(MAX(status = 'Approved') = 1, 'Approved', 'Pending') AS status "
-           "FROM bookings WHERE status IN ('Pending', 'Approved')")
+           "FROM bookings WHERE status IN ('Pending', 'Under Review', 'Approved')")
     params = []
     if resource:
         sql += " AND resource = %s"
@@ -236,21 +271,10 @@ def block_slot():
     try:
         cursor.execute("INSERT INTO blocked_slots (resource, blocked_date, time_slot) VALUES (%s, %s, %s)",
                        (resource, blocked_date, time_slot))
-
-        # Auto-reject any existing pending bookings for this newly blocked slot
-        cursor.execute("SELECT username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') FROM bookings "
-                       "WHERE resource = %s AND booking_date = %s AND time_slot = %s AND status = 'Pending'",
-                       (resource, blocked_date, time_slot))
-        affected = cursor.fetchall()
-        cursor.execute("UPDATE bookings SET status = 'Rejected' "
-                       "WHERE resource = %s AND booking_date = %s AND time_slot = %s AND status = 'Pending'",
-                       (resource, blocked_date, time_slot))
-        for user_row in affected:
-            msg = f"Your pending booking for {user_row[1]} on {user_row[2]} was automatically rejected due to a maintenance block."
-            cursor.execute("INSERT INTO notifications (username, message) VALUES (%s, %s)", (user_row[0], msg))
-
+        # Open requests are rejected and an approved booking is cancelled; each student is notified
+        affected = release_slot(cursor, resource, blocked_date, time_slot)
         db.commit()
-        return jsonify({"message": "Slot blocked successfully!"}), 201
+        return jsonify({"message": "Slot blocked successfully!", "affectedBookings": len(affected)}), 201
     except mysql.connector.IntegrityError:
         db.rollback()
         return jsonify({"message": "That slot is already blocked."}), 409
@@ -304,7 +328,7 @@ def get_notifications():
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    sql = "SELECT id, message, is_read, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as date FROM notifications WHERE username = %s ORDER BY created_at DESC"
+    sql = "SELECT id, message, is_read, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as date FROM notifications WHERE username = %s ORDER BY created_at DESC, id DESC"
     cursor.execute(sql, (username,))
     notifications = cursor.fetchall()
     

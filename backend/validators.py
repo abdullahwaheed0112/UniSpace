@@ -11,6 +11,12 @@ RESOURCES = ("Conference Room", "Study Room", "Lab", "Auditorium")
 # slot code -> start hour (24 h clock). Hourly slots, 9 AM to 5 PM with a lunch break.
 TIME_SLOTS = {"9-10": 9, "10-11": 10, "11-12": 11, "1-2": 13, "2-3": 14, "3-4": 15, "4-5": 16}
 
+# slot code -> text for messages shown to people
+SLOT_LABELS = {
+    "9-10": "9:00-10:00 AM", "10-11": "10:00-11:00 AM", "11-12": "11:00 AM-12:00 PM",
+    "1-2": "1:00-2:00 PM", "2-3": "2:00-3:00 PM", "3-4": "3:00-4:00 PM", "4-5": "4:00-5:00 PM",
+}
+
 BOOKING_WINDOW_DAYS = 7      # a student can book from today up to this many days ahead
 BLOCK_WINDOW_DAYS = 90       # an admin can block slots up to this many days ahead
 
