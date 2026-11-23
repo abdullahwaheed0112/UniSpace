@@ -5,6 +5,7 @@ import mysql.connector
 import config
 from auth import admin_required, hash_password, issue_token, login_required, student_required, verify_password
 from db import get_db
+from validators import RESOURCES, parse_date, validate_block, validate_booking, validate_signup
 
 # Create the Flask app
 app = Flask(__name__)
@@ -14,58 +15,56 @@ CORS(app, origins=config.CORS_ORIGINS)  # only the configured frontend origins m
 # Route: POST /signup
 @app.route("/signup", methods=["POST"])
 def signup():
-    # Get the JSON data sent from the frontend
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    username = str(data.get("username", "")).strip()
+    email = str(data.get("email", "")).strip().lower()
+    password = data.get("password", "")
 
-    username = data["username"]
-    email = data["email"]
-    password = data["password"]
+    error = validate_signup(username, email, password)
+    if error:
+        return jsonify({"message": error}), 400
 
-    # Connect to MySQL
     db = get_db()
-
     cursor = db.cursor()
-
-    # Insert the user into the database
-    sql = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
-    values = (username, email, hash_password(password))  # only the salted hash is stored
-
     try:
-        cursor.execute(sql, values)
+        cursor.execute("INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+                       (username, email, hash_password(password)))  # only the salted hash is stored
         db.commit()
         return jsonify({"message": "Sign up successful!"}), 201
-    except mysql.connector.Error as err:
-        return jsonify({"message": f"Error: {err}"}), 500
+    except mysql.connector.IntegrityError:
+        return jsonify({"message": "That username or email is already registered."}), 409
+    except mysql.connector.Error:
+        db.rollback()
+        app.logger.exception("sign up failed")
+        return jsonify({"message": "Something went wrong on the server. Please try again."}), 500
     finally:
         cursor.close()
         db.close()
 
-
 # Route: POST /signin
 @app.route("/signin", methods=["POST"])
 def signin():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    password = data.get("password", "")
+    if not email or not isinstance(password, str) or not password:
+        return jsonify({"message": "Email and password are required."}), 400
 
-    email = data["email"]
-    password = data["password"]
-
-    # Connect to MySQL
     db = get_db()
-
     cursor = db.cursor()
+    try:
+        # Look the user up by email, then verify the password against the stored hash
+        cursor.execute("SELECT id, username, email, role, password FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
 
-    # Look the user up by email, then verify the password against the stored hash
-    cursor.execute("SELECT id, username, email, role, password FROM users WHERE email = %s", (email,))
-    user = cursor.fetchone()
-
-    ok, needs_rehash = verify_password(user[4] if user else None, password)
-    if ok and needs_rehash:
-        # Legacy plain-text password from before hashing: upgrade it now that we know the real password
-        cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hash_password(password), user[0]))
-        db.commit()
-
-    cursor.close()
-    db.close()
+        ok, needs_rehash = verify_password(user[4] if user else None, password)
+        if ok and needs_rehash:
+            # Legacy plain-text password from before hashing: upgrade it now that we know the real password
+            cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hash_password(password), user[0]))
+            db.commit()
+    finally:
+        cursor.close()
+        db.close()
 
     if user and ok:
         # user[0]=id, user[1]=username, user[2]=email, user[3]=role
@@ -75,9 +74,7 @@ def signin():
             "role": user[3],
             "token": issue_token(user[0])
         }), 200
-    else:
-        return jsonify({"message": "Invalid email or password!"}), 401
-
+    return jsonify({"message": "Invalid email or password!"}), 401
 
 # Route: GET /me  (who does this token belong to?)
 @app.route("/me", methods=["GET"])
@@ -91,30 +88,35 @@ def me():
 @app.route("/bookings", methods=["POST"])
 @student_required
 def create_booking():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     username = g.user["username"]  # from the verified token, never from the request body
     resource = data.get("resource")
     booking_date = data.get("date")
     time_slot = data.get("timeSlot")
 
+    error = validate_booking(resource, booking_date, time_slot)
+    if error:
+        return jsonify({"message": error}), 400
+
     db = get_db()
     cursor = db.cursor()
-
-    # Check if slot is blocked
-    cursor.execute("SELECT id FROM blocked_slots WHERE resource = %s AND blocked_date = %s AND time_slot = %s", (resource, booking_date, time_slot))
-    if cursor.fetchone():
-        cursor.close()
-        db.close()
-        return jsonify({"message": "This slot has been blocked by the administration."}), 400
-
-    # Insert booking
-    sql = "INSERT INTO bookings (username, resource, booking_date, time_slot, status) VALUES (%s, %s, %s, %s, 'Pending')"
     try:
-        cursor.execute(sql, (username, resource, booking_date, time_slot))
+        # Check if slot is blocked
+        cursor.execute("SELECT id FROM blocked_slots WHERE resource = %s AND blocked_date = %s AND time_slot = %s",
+                       (resource, booking_date, time_slot))
+        if cursor.fetchone():
+            return jsonify({"message": "This slot has been blocked by the administration."}), 400
+
+        cursor.execute("INSERT INTO bookings (username, resource, booking_date, time_slot, status) "
+                       "VALUES (%s, %s, %s, %s, 'Pending')", (username, resource, booking_date, time_slot))
         db.commit()
         return jsonify({"message": "Booking successful!"}), 201
-    except mysql.connector.Error as err:
-        return jsonify({"message": f"Error: {err}"}), 500
+    except mysql.connector.IntegrityError:
+        return jsonify({"message": "You already have a request or booking for this slot."}), 409
+    except mysql.connector.Error:
+        db.rollback()
+        app.logger.exception("create booking failed")
+        return jsonify({"message": "Something went wrong on the server. Please try again."}), 500
     finally:
         cursor.close()
         db.close()
@@ -144,27 +146,32 @@ def get_bookings():
 @app.route("/bookings/<int:booking_id>/status", methods=["PUT"])
 @admin_required
 def update_booking_status(booking_id):
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     new_status = data.get("status")
+    if new_status not in ("Approved", "Rejected"):
+        return jsonify({"message": "Status must be Approved or Rejected."}), 400
 
     db = get_db()
     cursor = db.cursor()
-
-    sql = "UPDATE bookings SET status = %s WHERE id = %s"
     try:
-        cursor.execute(sql, (new_status, booking_id))
-        
-        # Add notification logic
-        cursor.execute("SELECT username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') FROM bookings WHERE id = %s", (booking_id,))
+        cursor.execute("SELECT username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') FROM bookings WHERE id = %s",
+                       (booking_id,))
         booking = cursor.fetchone()
-        if booking:
-            msg = f"Your booking for {booking[1]} on {booking[2]} has been {new_status}."
-            cursor.execute("INSERT INTO notifications (username, message) VALUES (%s, %s)", (booking[0], msg))
-            
+        if not booking:
+            return jsonify({"message": "Booking not found."}), 404
+
+        cursor.execute("UPDATE bookings SET status = %s WHERE id = %s", (new_status, booking_id))
+        msg = f"Your booking for {booking[1]} on {booking[2]} has been {new_status}."
+        cursor.execute("INSERT INTO notifications (username, message) VALUES (%s, %s)", (booking[0], msg))
         db.commit()
         return jsonify({"message": f"Booking {booking_id} updated to {new_status}"}), 200
-    except mysql.connector.Error as err:
-        return jsonify({"message": f"Error: {err}"}), 500
+    except mysql.connector.IntegrityError:
+        db.rollback()
+        return jsonify({"message": "Another booking is already approved for that slot."}), 409
+    except mysql.connector.Error:
+        db.rollback()
+        app.logger.exception("update booking status failed")
+        return jsonify({"message": "Something went wrong on the server. Please try again."}), 500
     finally:
         cursor.close()
         db.close()
@@ -181,6 +188,10 @@ def availability():
     resource = request.args.get("resource")
     date_from = request.args.get("from")
     date_to = request.args.get("to")
+    if resource and resource not in RESOURCES:
+        return jsonify({"message": "Unknown resource."}), 400
+    if (date_from and parse_date(date_from) is None) or (date_to and parse_date(date_to) is None):
+        return jsonify({"message": "Dates must look like 2026-11-26."}), 400
 
     sql = ("SELECT resource, DATE_FORMAT(booking_date, '%Y-%m-%d') AS date, time_slot AS timeSlot, "
            "IF(MAX(status = 'Approved') = 1, 'Approved', 'Pending') AS status "
@@ -202,47 +213,51 @@ def availability():
     try:
         cursor.execute(sql, params)
         return jsonify(cursor.fetchall()), 200
-    except mysql.connector.Error:
-        return jsonify({"message": "Invalid filter."}), 400
     finally:
         cursor.close()
         db.close()
-
 
 # --- BLOCKED SLOTS API ---
 
 @app.route("/blocked_slots", methods=["POST"])
 @admin_required
 def block_slot():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     resource = data.get("resource")
     blocked_date = data.get("date")
     time_slot = data.get("time")
 
+    error = validate_block(resource, blocked_date, time_slot)
+    if error:
+        return jsonify({"message": error}), 400
+
     db = get_db()
     cursor = db.cursor()
-
-    sql = "INSERT INTO blocked_slots (resource, blocked_date, time_slot) VALUES (%s, %s, %s)"
     try:
-        cursor.execute(sql, (resource, blocked_date, time_slot))
-        db.commit()
-        
+        cursor.execute("INSERT INTO blocked_slots (resource, blocked_date, time_slot) VALUES (%s, %s, %s)",
+                       (resource, blocked_date, time_slot))
+
         # Auto-reject any existing pending bookings for this newly blocked slot
-        cursor.execute("SELECT username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') FROM bookings WHERE resource = %s AND booking_date = %s AND time_slot = %s AND status = 'Pending'", (resource, blocked_date, time_slot))
+        cursor.execute("SELECT username, resource, DATE_FORMAT(booking_date, '%Y-%m-%d') FROM bookings "
+                       "WHERE resource = %s AND booking_date = %s AND time_slot = %s AND status = 'Pending'",
+                       (resource, blocked_date, time_slot))
         affected = cursor.fetchall()
-        
-        reject_sql = "UPDATE bookings SET status = 'Rejected' WHERE resource = %s AND booking_date = %s AND time_slot = %s AND status = 'Pending'"
-        cursor.execute(reject_sql, (resource, blocked_date, time_slot))
-        
+        cursor.execute("UPDATE bookings SET status = 'Rejected' "
+                       "WHERE resource = %s AND booking_date = %s AND time_slot = %s AND status = 'Pending'",
+                       (resource, blocked_date, time_slot))
         for user_row in affected:
             msg = f"Your pending booking for {user_row[1]} on {user_row[2]} was automatically rejected due to a maintenance block."
             cursor.execute("INSERT INTO notifications (username, message) VALUES (%s, %s)", (user_row[0], msg))
-            
-        db.commit()
 
+        db.commit()
         return jsonify({"message": "Slot blocked successfully!"}), 201
-    except mysql.connector.Error as err:
-        return jsonify({"message": f"Error: {err}"}), 500
+    except mysql.connector.IntegrityError:
+        db.rollback()
+        return jsonify({"message": "That slot is already blocked."}), 409
+    except mysql.connector.Error:
+        db.rollback()
+        app.logger.exception("block slot failed")
+        return jsonify({"message": "Something went wrong on the server. Please try again."}), 500
     finally:
         cursor.close()
         db.close()
@@ -265,14 +280,16 @@ def get_blocked_slots():
 def unblock_slot(slot_id):
     db = get_db()
     cursor = db.cursor()
-
-    sql = "DELETE FROM blocked_slots WHERE id = %s"
     try:
-        cursor.execute(sql, (slot_id,))
+        cursor.execute("DELETE FROM blocked_slots WHERE id = %s", (slot_id,))
         db.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"message": "That slot is not blocked."}), 404
         return jsonify({"message": "Slot unblocked successfully!"}), 200
-    except mysql.connector.Error as err:
-        return jsonify({"message": f"Error: {err}"}), 500
+    except mysql.connector.Error:
+        db.rollback()
+        app.logger.exception("unblock slot failed")
+        return jsonify({"message": "Something went wrong on the server. Please try again."}), 500
     finally:
         cursor.close()
         db.close()
