@@ -1,118 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>UniSpace+ My Bookings</title>
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="mybookings.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My bookings · UniSpace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="mybookings-body">
-
-</head>
-
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="site-header"></div>
 
-<!-- Navbar Placeholder -->
-<div id="navbar"></div>
+    <main id="main">
+        <div class="page-head">
+            <h1>My bookings</h1>
+            <p>Where each request stands. Open a booking's history to see every step and who took it.</p>
+        </div>
 
-<div class="mybookings-container">
-  <div class="container mb-4">
-    <h2 class="text-center">My Bookings</h2>
-  </div>
+        <div id="message" class="notice" role="status" aria-live="polite" style="margin-bottom: 16px;"></div>
 
-  <div class="container d-flex justify-content-center">
-    <div class="my-bookings-card shadow-lg p-4">
-      <h3 class="mb-4 text-center">Your Registered Bookings</h3>
-      <div id="bookingsContainer" class="row justify-content-center custom-scrollbar" style="max-height: 600px; overflow-y: auto;">
-        <!-- Bookings will be populated here as cards -->
-      </div>
-    <div id="noBookings" class="text-center mt-4" style="display: none;">
-        <p class="text-light mb-3">No bookings found yet.</p>
-        <a href="booking.html" class="btn btn-lg px-5 py-3 fw-bold" style="background: linear-gradient(135deg, #ff7e5f, #feb47b); border: none; color: #fff; border-radius: 50px; letter-spacing: 1px; box-shadow: 0 8px 20px rgba(255,126,95,0.4); transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 12px 28px rgba(255,126,95,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 8px 20px rgba(255,126,95,0.4)'">
-            ＋ Make a Booking
-        </a>
-    </div>
-  </div>
-</div>
+        <div class="stack">
+            <section class="panel" aria-labelledby="open-title">
+                <header><h2 id="open-title">Open requests and approved bookings</h2></header>
+                <div id="open-list"><p class="empty">Loading…</p></div>
+            </section>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="config.js"></script>
-<script src="api.js"></script>
-<script src="ui.js"></script>
-<script src="loadNavbar.js"></script>
-<script src="script.js"></script>
+            <section class="panel" aria-labelledby="closed-title">
+                <header><h2 id="closed-title">Closed</h2><span class="muted">Rejected or cancelled</span></header>
+                <div id="closed-list"><p class="empty">Loading…</p></div>
+            </section>
+        </div>
+    </main>
 
-<script>
-// Load and display bookings securely from backend
-document.addEventListener("DOMContentLoaded", async function () {
-  const bookingsContainer = document.getElementById("bookingsContainer");
-  const noBookings = document.getElementById("noBookings");
-  const username = localStorage.getItem("username");
-
-  if (!username) {
-    window.location.href = "signin.html";
-    return;
-  }
-
-  try {
-      const { data } = await apiFetch("/bookings");
-      let bookings = Array.isArray(data) ? data : [];
-
-      // Sort: Pending first, then Approved/Rejected — newest dates first within each group
-      bookings.sort((a, b) => {
-        const aPending = a.status === 'Pending' ? 0 : 1;
-        const bPending = b.status === 'Pending' ? 0 : 1;
-        if (aPending !== bPending) return aPending - bPending;
-        return new Date(b.date) - new Date(a.date);
-      });
-
-      if (bookings.length === 0) {
-        noBookings.style.display = 'block';
-      } else {
-        bookings.forEach((booking, index) => {
-          const formattedDate = new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-          const colDiv = document.createElement('div');
-          colDiv.className = 'col-md-6 mb-3 fade-in-element';
-          colDiv.style.transitionDelay = `${index * 0.1}s`;
-          colDiv.innerHTML = `
-            <div class="booking-card-item">
-              <div class="text-start">
-                <h5>${escapeHtml(booking.resource)}</h5>
-                <p><strong>Date:</strong> ${escapeHtml(formattedDate)}</p>
-                <p><strong>Time Slot:</strong> ${escapeHtml(booking.timeSlot)}</p>
-                <p><strong>Status:</strong> <span class="badge badge-custom ${getBadgeClass(booking.status)}">${escapeHtml(booking.status)}</span></p>
-              </div>
-            </div>
-          `;
-          bookingsContainer.appendChild(colDiv);
-          
-          // Trigger animation
-          setTimeout(() => {
-            colDiv.classList.add('is-visible');
-          }, 50);
-        });
-      }
-  } catch (err) {
-      console.error("Error fetching bookings:", err);
-      bookingsContainer.innerHTML = '<p class="text-danger">Failed to load bookings from server.</p>';
-  }
-
-  function getBadgeClass(status) {
-    switch(status) {
-      case 'Approved': return 'bg-success';
-      case 'Rejected': return 'bg-danger';
-      default: return 'bg-warning';
-    }
-  }
-});
-</script>
-
+    <div id="site-footer"></div>
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="ui.js"></script>
+    <script src="nav.js"></script>
+    <script src="mybookings.js"></script>
 </body>
 </html>
