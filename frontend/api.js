@@ -44,3 +44,12 @@ async function apiFetch(path, { method = "GET", body, auth = true } = {}) {
     }
     return { ok: response.ok, status: response.status, data };
 }
+
+// The resources and time slots come from the server (GET /meta), so the lists live in exactly one place.
+let metaPromise = null;
+function loadMeta() {
+    if (!metaPromise) {
+        metaPromise = apiFetch("/meta", { auth: false }).then(({ data }) => data);
+    }
+    return metaPromise;
+}
