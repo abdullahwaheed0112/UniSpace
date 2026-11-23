@@ -1,293 +1,258 @@
-# UniSpace+ 🏛️
+# UniSpace: campus room and lab booking
 
-> **A full-stack university resource booking platform** — allowing students to reserve campus spaces (conference rooms, labs, study rooms, and auditoriums) and giving admins complete control over scheduling.
+![Python](https://img.shields.io/badge/Python-3.15-blue?style=flat-square&logo=python)
+![Flask](https://img.shields.io/badge/Flask-3.1-lightgrey?style=flat-square&logo=flask)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?style=flat-square&logo=mysql&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen?style=flat-square)
 
----
+> A Flask and MySQL web app where students request campus rooms and labs and administrators review, approve or reject the requests. This fork takes a group course project and hardens it: **server-enforced role-based access, hashed passwords, signed login tokens, a multi-step approval workflow with an audit trail, database-level booking rules, and 94 automated tests**, behind a redesigned interface.
 
-## 📋 Table of Contents
+![Availability grid for the Lab, with free, requested, booked and blocked slots](docs/images/availability.png)
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Database Schema](#-database-schema)
-- [API Reference](#-api-reference)
-- [Pages & UI](#-pages--ui)
-- [Setup & Installation](#-setup--installation)
-- [Default Credentials](#-default-credentials)
-- [Known Limitations & Notes](#-known-limitations--notes)
+## The problem
 
----
+Room and lab bookings on a campus tend to run on messages and spreadsheets. Two people ask for the same slot, nobody knows who got it, and when a room is pulled for maintenance the people affected find out late or not at all.
 
-## 🌐 Overview
+UniSpace turns that into a small, explicit process. A student **requests** a slot. An administrator **reviews** it and **decides**. Everyone sees where a request stands, why it was rejected, and who did what. Rules the business cares about, such as one approved booking per slot, are enforced by the server and the database, not left to good behaviour.
 
-**UniSpace+** is a campus resource management web application built for universities. It allows students to browse available rooms, make booking requests, and track their booking status — while admins can approve/reject requests, block time slots for maintenance, view reports, and receive automatic system notifications.
+## What it does
 
-The app follows a simple **frontend → REST API → MySQL** architecture with no framework on the frontend (vanilla HTML/CSS/JS + Bootstrap) and a lightweight **Flask** backend.
-
----
-
-## ✨ Features
-
-### 👨‍🎓 Student Features
-- **Sign Up / Sign In** — Account registration and authentication with role-based access
-- **Browse Resources** — View real-time availability for Conference Rooms, Study Rooms, Labs, and Auditoriums for the next 7 days
-- **Make a Booking** — Book any available time slot with a simple form; automatically blocked slots are prevented
-- **My Bookings** — View all personal bookings with current status (Pending / Approved / Rejected)
-- **Notifications** — Receive in-app notifications when booking status changes (Approved/Rejected)
-
-### 🛡️ Admin Features
-- **Admin Dashboard** — Central panel for all admin operations
-- **Approve / Reject Bookings** — Review all student booking requests and action them
-- **Block Time Slots** — Block specific resource + date + time slot combinations for maintenance; auto-rejects any pending bookings in that slot and notifies students
-- **Unblock Slots** — Remove existing blocks from slots
-- **Reports** — View statistics: total bookings, approved, rejected, and pending counts
-- **Role-based Navigation** — Navbar dynamically adapts based on whether user is admin or student
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
+| For students | For administrators |
 |---|---|
-| **Frontend** | HTML5, CSS3, Vanilla JavaScript, Bootstrap 5.3, Font Awesome 6 |
-| **Backend** | Python 3, Flask, Flask-CORS |
-| **Database** | MySQL |
-| **DB Connector** | `mysql-connector-python` |
-| **Dev Server** | VS Code Live Server (frontend), Flask dev server (backend) |
+| Create an account and sign in | Review queue filtered by status (new, in review, approved, closed) |
+| See a seven-day availability grid per resource | Take a request into review, approve it, reject it or cancel it, with a reason where one is required |
+| Request a slot (weekdays, up to seven days ahead) | Approving a request automatically declines the other open requests for that slot |
+| Follow each booking and open its full history | Block a slot for maintenance: open requests are rejected, an approved booking is cancelled, students are told why |
+| Cancel their own bookings | See a status summary at a glance |
+| In-app notifications for every decision | |
 
----
+### Screens
 
-## 📁 Project Structure
+| Request a booking | My bookings, with one booking's history open |
+|---|---|
+| ![The request form: slots that are booked, blocked or already started are disabled](docs/images/request-booking.png) | ![A student's bookings with status chips and an expanded history timeline](docs/images/my-bookings.png) |
 
+![The administrator's request queue, status summary and maintenance blocks](docs/images/admin-requests.png)
+
+| Rejecting needs a reason | Notifications |
+|---|---|
+| ![The reject dialog asking for a reason](docs/images/admin-reject-reason.png) | ![The notifications menu on the home page](docs/images/notifications.png) |
+
+The layout adapts to phones; tables become stacked cards.
+
+| Availability | Requests |
+|---|---|
+| ![Availability grid on a phone](docs/images/mobile-availability.png) | ![Request queue on a phone](docs/images/mobile-admin.png) |
+
+## The booking workflow
+
+A request is not simply "approved or rejected". It moves through steps, with rules about who may take each one:
+
+```mermaid
+stateDiagram-v2
+    state "Under Review" as Review
+    [*] --> Pending: student requests a slot
+    Pending --> Review: admin starts review
+    Pending --> Rejected: admin rejects (reason required)
+    Pending --> Cancelled: owner cancels, or admin with a reason
+    Review --> Approved: admin approves
+    Review --> Rejected: admin rejects (reason required)
+    Review --> Cancelled: owner cancels, or admin with a reason
+    Approved --> Cancelled: owner cancels, or admin with a reason
+    Rejected --> [*]
+    Cancelled --> [*]
 ```
-UNISPACE-/
-├── backend/
-│   └── app.py              # Flask REST API — all routes
-├── database/
-│   └── schema.sql          # MySQL schema + seed data
-├── frontend/
-│   ├── index.html          # Home / landing page
-│   ├── index.css           # Home page styles
-│   ├── signin.html         # Sign in page
-│   ├── signup.html         # Sign up page
-│   ├── signup.js           # Sign up form logic
-│   ├── booking.html        # Booking form page
-│   ├── mybookings.html     # Student's bookings list
-│   ├── mybookings.css      # My Bookings styles
-│   ├── resources.html      # Availability table (7-day view)
-│   ├── resources.css       # Resources page styles
-│   ├── dashboard.html      # Admin dashboard
-│   ├── dashboard.css       # Admin dashboard styles
-│   ├── navbar.html         # Shared navbar HTML template
-│   ├── loadNavbar.js       # Dynamically injects navbar + role-based links
-│   ├── script.js           # Shared JS: sign in, booking, my bookings logic
-│   └── style.css           # Global shared styles
-└── images/
-    └── pawel-czerwinski-*.jpg   # Hero background image
+
+- A booking **cannot be approved before it has been taken into review**.
+- **Approving** a booking automatically rejects the other open requests for the same slot and notifies those students.
+- A **maintenance block** rejects open requests for that slot and cancels an approved booking.
+- **Rejected and Cancelled are final.** A student whose slot was cancelled can request it again as a new booking.
+- Every change is stored in `booking_events` (who, when, from, to, reason), so nothing happens silently.
+- The rules live in one readable table in [`backend/workflow.py`](backend/workflow.py) and are covered by tests.
+
+## Architecture and data model
+
+```mermaid
+flowchart LR
+    B["Browser: HTML, CSS, vanilla JS"] -- "JSON over HTTP, bearer token" --> A["Flask API"]
+    A -- "mysql-connector" --> D[("MySQL 8")]
 ```
 
----
+```mermaid
+erDiagram
+    users ||--o{ bookings : makes
+    users ||--o{ notifications : receives
+    bookings ||--o{ booking_events : "has history"
 
-## 🗄️ Database Schema
+    users {
+        int id PK
+        varchar username UK
+        varchar email UK
+        varchar password "salted scrypt hash"
+        varchar role "student or admin"
+    }
+    bookings {
+        int id PK
+        varchar username FK
+        varchar resource
+        date booking_date
+        varchar time_slot
+        varchar status "Pending, Under Review, Approved, Rejected, Cancelled"
+        varchar decision_note "reason for a rejection or cancellation"
+        varchar active_request UK "generated: one open request per user and slot"
+        varchar approved_slot UK "generated: one approved booking per slot"
+    }
+    booking_events {
+        int id PK
+        int booking_id FK
+        varchar from_status
+        varchar to_status
+        varchar actor "username or system"
+        varchar note
+        timestamp created_at
+    }
+    notifications {
+        int id PK
+        varchar username FK
+        varchar message
+        boolean is_read
+        timestamp created_at
+    }
+    blocked_slots {
+        int id PK
+        varchar resource
+        date blocked_date
+        varchar time_slot
+    }
+```
 
-The app uses a single MySQL database named `unispace` with **4 tables**:
+Two generated, unique columns on `bookings` turn business rules into database constraints: a user cannot hold two open requests for the same slot, and a slot can have at most one approved booking. There is a test that tries to break the second rule directly in SQL and checks that the database refuses.
 
-### `users`
-| Column | Type | Notes |
+## Security: what was fixed
+
+The original submission worked but was not safe to expose. These were found by reading the code and fixed on this fork, each in its own commit:
+
+| Before | Now |
+|---|---|
+| Passwords stored in plain text | Salted scrypt hashes; any legacy plain-text row is upgraded at the user's next sign-in |
+| "Logged in" and "admin" were values in `localStorage` that anyone could edit | Signed, expiring login tokens. The role is read from the database on every request |
+| Every admin endpoint was open to anyone | Admin-only routes answer 401 (not signed in) or 403 (wrong role) |
+| A booking could be created for any username | The booking owner comes from the token, never from the request body |
+| Everyone's bookings and notifications were readable | Students see only their own. The public availability endpoint returns no usernames |
+| MySQL root password hardcoded in 10 places | Settings come from environment variables (`.env`, git-ignored) |
+| Flask `debug=True` | Off by default; the dev server binds to 127.0.0.1 |
+| CORS open to every site | Only the configured frontend origins |
+| Stored XSS: a username like `<img onerror=...>` ran in the admin's browser | Output escaping everywhere, plus username rules; verified in a browser |
+| No input validation, raw database errors sent to the client | Validated on the server; failures return clear messages or a generic error |
+| Duplicate emails, double bookings and two approvals for one slot were possible | Unique constraints, foreign keys and generated-column rules in MySQL |
+
+**Not done, and worth knowing about:**
+
+- The login token is kept in `localStorage`, so a future XSS bug would expose it (cookies with `HttpOnly` would be the alternative).
+- No rate limiting or lockout on sign-in.
+- Plain HTTP and Flask's development server: put it behind HTTPS and a production server (waitress or gunicorn) before real use.
+- No password reset, email verification or admin-management screen; administrators are created with `backend/seed_admin.py`.
+- Time rules ("slot already started") use the server's local clock.
+
+## API
+
+Base URL `http://127.0.0.1:5000`. "Auth" means `Authorization: Bearer <token>` from `POST /signin`.
+
+| Method and route | Who | Purpose |
 |---|---|---|
-| `id` | INT AUTO_INCREMENT | Primary key |
-| `username` | VARCHAR(50) | Display name |
-| `email` | VARCHAR(100) | Login email |
-| `password` | VARCHAR(100) | Plain text (see notes) |
-| `role` | VARCHAR(20) | `'student'` or `'admin'` (default: `'student'`) |
+| `POST /signup` | anyone | Create a student account |
+| `POST /signin` | anyone | Returns `{token, username, role}` |
+| `GET /meta` | anyone | Resources and time slots (single source of truth for the UI) |
+| `GET /availability?resource=&from=&to=` | anyone | Which slots are requested or booked, without usernames |
+| `GET /blocked_slots` | anyone | Maintenance blocks |
+| `GET /me` | signed in | Current username and role |
+| `POST /bookings` | student | Request a slot |
+| `GET /bookings` | signed in | Own bookings (student) or all (admin) |
+| `GET /bookings/<id>` | owner or admin | One booking with its history |
+| `PUT /bookings/<id>/status` | owner or admin | Move through the workflow: `{status, note}` |
+| `GET /notifications`, `PUT /notifications/read` | signed in | Own notifications |
+| `POST /blocked_slots`, `DELETE /blocked_slots/<id>` | admin | Block or unblock a slot |
 
-### `bookings`
-| Column | Type | Notes |
-|---|---|---|
-| `id` | INT AUTO_INCREMENT | Primary key |
-| `username` | VARCHAR(50) | Booking owner |
-| `resource` | VARCHAR(50) | e.g. `Conference Room` |
-| `booking_date` | DATE | |
-| `time_slot` | VARCHAR(20) | e.g. `9-10` |
-| `status` | VARCHAR(20) | `Pending` / `Approved` / `Rejected` |
-| `created_at` | TIMESTAMP | Auto |
+## Setup
 
-### `blocked_slots`
-| Column | Type | Notes |
-|---|---|---|
-| `id` | INT AUTO_INCREMENT | Primary key |
-| `resource` | VARCHAR(50) | |
-| `blocked_date` | DATE | |
-| `time_slot` | VARCHAR(20) | |
-| `created_at` | TIMESTAMP | Auto |
-
-### `notifications`
-| Column | Type | Notes |
-|---|---|---|
-| `id` | INT AUTO_INCREMENT | Primary key |
-| `username` | VARCHAR(50) | Recipient |
-| `message` | VARCHAR(255) | Notification text |
-| `is_read` | BOOLEAN | Default: `FALSE` |
-| `created_at` | TIMESTAMP | Auto |
-
----
-
-## 🔌 API Reference
-
-Base URL: `http://localhost:5000`
-
-### Auth
-
-| Method | Route | Description | Body |
-|---|---|---|---|
-| `POST` | `/signup` | Register new user | `{ username, email, password }` |
-| `POST` | `/signin` | Sign in | `{ email, password }` → returns `{ username, role }` |
-
-### Bookings
-
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/bookings` | Create booking — `{ username, resource, date, timeSlot }` |
-| `GET` | `/bookings` | Get all bookings (admin) or filter by `?username=` (student) |
-| `PUT` | `/bookings/<id>/status` | Update booking status — `{ status: "Approved"/"Rejected" }` (also triggers notification) |
-
-### Blocked Slots
-
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/blocked_slots` | Block a slot — `{ resource, date, time }` (auto-rejects pending bookings + notifies) |
-| `GET` | `/blocked_slots` | List all blocked slots |
-| `DELETE` | `/blocked_slots/<id>` | Unblock a slot |
-
-### Notifications
-
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/notifications?username=` | Get all notifications for a user |
-| `PUT` | `/notifications/read` | Mark all as read — `{ username }` |
-
----
-
-## 🖥️ Pages & UI
-
-### 🏠 Home (`index.html`)
-The landing page features a full-screen blurred background hero with animated fade-in elements. Includes a feature highlights section (Instant Booking, Real-Time Availability, Admin Control) and call-to-action buttons. Navigation adapts based on login state.
-
-### 🔐 Sign In / Sign Up (`signin.html`, `signup.html`)
-Clean authentication forms. On sign-in, `username` and `role` are persisted to `localStorage` and used for role-based routing throughout the app.
-
-### 📅 Resources (`resources.html`)
-Select a resource from the dropdown; a 7-day availability table is rendered dynamically. Each cell shows:
-- 🟢 **Free** — available to book
-- 🔴 **Booked** — already reserved
-- 🟡 **Blocked by Admin** — maintenance block
-
-### 📝 Booking (`booking.html`)
-A glass-card booking form where students pick resource, date, and time slot. Time slots that have already passed in the current day are automatically hidden. Blocked slots are rejected server-side with a user-friendly error message.
-
-### 📋 My Bookings (`mybookings.html`)
-Displays all bookings for the logged-in student as cards with color-coded status badges (Pending / Approved / Rejected). Includes a notification bell that shows unread notifications.
-
-### 🛡️ Admin Dashboard (`dashboard.html`)
-Split into two panels:
-1. **Booking Requests** — scrollable card list with Approve/Reject buttons per booking
-2. **Admin Actions** (tabbed):
-   - *Block Time Slots* — form to block a resource/date/time, plus a live list of all current blocks with unblock buttons
-   - *View Reports* — stat cards showing Total, Approved, Rejected, and Pending booking counts
-
----
-
-## ⚙️ Setup & Installation
-
-### Prerequisites
-- Python 3.8+
-- MySQL Server
-- VS Code with the **Live Server** extension (for frontend)
-- pip
-
-### 1. Clone / Extract the Project
+Tested with **Python 3.15** and **MySQL 8.0.46** on Windows 11 (MySQL 8.0.16 or later is needed for the CHECK constraints and generated columns).
 
 ```bash
-unzip Unispace_.zip
-cd i242582_i242510_i242567/UNISPACE-
-```
+git clone https://github.com/abdullahwaheed0112/UniSpace.git
+cd UniSpace
+python -m venv .venv
+# Windows: .venv\Scripts\activate      macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 
-### 2. Set Up the Database
-
-Open MySQL and run the schema file:
-
-```bash
+cp .env.example .env        # then edit .env: database password and a SECRET_KEY
 mysql -u root -p < database/schema.sql
-```
-
-This creates the `unispace` database, all 4 tables, and seeds the default admin account.
-
-### 3. Install Python Dependencies
-
-```bash
-pip install flask flask-cors mysql-connector-python
-```
-
-### 4. Configure the Database Connection
-
-In `backend/app.py`, update the MySQL connection settings if your credentials differ:
-
-```python
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="123456",   # ← change this
-    database="unispace"
-)
-```
-
-> ⚠️ The DB connection is hardcoded in every route. Consider extracting it to a config or using environment variables for production.
-
-### 5. Start the Backend
-
-```bash
 cd backend
-python app.py
+python seed_admin.py        # asks for the admin email and password (it hashes the password)
+python app.py               # API on http://127.0.0.1:5000
 ```
 
-Flask will start at `http://localhost:5000`.
+In a second terminal, serve the frontend from the repository root and open it:
 
-### 6. Start the Frontend
+```bash
+python -m http.server 5500 --bind 127.0.0.1
+# then browse to http://127.0.0.1:5500/frontend/index.html
+```
 
-Open the `frontend/` folder in VS Code and click **Go Live** (Live Server). The app will open at `http://127.0.0.1:5500/frontend/index.html` (port may vary).
+(VS Code Live Server also works. The allowed origins are set by `CORS_ORIGINS` in `.env`.)
 
-> Make sure the frontend's fetch calls point to `http://localhost:5000` — this is already configured in `script.js`.
+**If port 5000 is already used on your machine,** start the API with `FLASK_PORT=5001` and tell the browser once, in its console: `localStorage.setItem("unispace_api_base", "http://127.0.0.1:5001")`.
 
----
+**Try it with demo data** (local only; creates demo accounts that share a documented password):
 
-## 🔑 Default Credentials
+```bash
+cd backend && python seed_demo.py --reset
+# creates admin@unispace.test and four students (aisha@example.com, bilal@..., sara@..., tariq@...)
+# password for all of them: demo-password-1
+```
+`--reset` empties bookings, history, notifications and blocks first (accounts are kept). Never run this against a real deployment.
 
-A default admin user is seeded by `schema.sql`:
+**Upgrading an existing database** from the original schema: apply `database/migrations/001` to `003` in order.
 
-| Field | Value |
-|---|---|
-| Email | `admin@unispace.com` |
-| Password | `admin123` |
-| Role | `admin` |
+### Tests
 
-Students can self-register via the Sign Up page. New accounts default to the `student` role.
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
----
+94 tests: unit tests for hashing, tokens, input rules and the workflow table, and API tests for accounts, the permission matrix, validation, the full approval workflow, competitor rejection, maintenance blocks and notifications. They run against a throwaway `unispace_test` database that the suite creates and drops itself, never your real data, and are skipped if MySQL is unreachable.
 
-## ⚠️ Known Limitations & Notes
+## Project structure
 
-- **Passwords are stored in plain text.** This is not safe for production. Use hashing (e.g. `bcrypt`) before deploying.
-- **No session/token authentication.** Login state is stored in `localStorage` with no server-side validation — any user can manually set their role in the browser.
-- **Hardcoded DB credentials** in every route in `app.py`. Use a `.env` file and `python-dotenv` for a real deployment.
-- **Available resources are hardcoded** in both the frontend dropdowns and backend logic. Extending to support dynamic resources would require schema changes.
-- **Time slots are fixed** to 6 hourly slots between 9 AM–4 PM (Mon–Fri only, past slots are hidden client-side).
-- **No duplicate booking prevention** — the same student could theoretically book the same slot twice if not checked.
-- The `username` foreign key constraint on `bookings` was intentionally omitted (noted in `schema.sql`) to simplify migration from a previous localStorage-based version.
+```text
+UniSpace/
+├── backend/
+│   ├── app.py            # Flask routes
+│   ├── auth.py           # password hashing, tokens, permission decorators
+│   ├── workflow.py       # the approval workflow rules
+│   ├── validators.py     # input rules, resource and slot lists
+│   ├── config.py, db.py  # settings from the environment, MySQL connection
+│   ├── seed_admin.py     # create the first admin
+│   └── seed_demo.py      # demo data for local use
+├── database/
+│   ├── schema.sql
+│   └── migrations/       # 001 hashing, 002 constraints, 003 workflow
+├── frontend/             # HTML pages, styles.css and vanilla JS (no framework, no build step)
+├── tests/                # pytest suite
+├── docs/images/          # screenshots used above
+├── images/               # background photo from the original design (no longer used)
+├── requirements.txt, requirements-dev.txt, .env.example
+└── README.md
+```
 
----
+## Tech stack
 
-## 👥 Contributors
+Python · Flask · Flask-CORS · MySQL 8 · mysql-connector-python · Werkzeug (scrypt) · itsdangerous (signed tokens) · pytest · HTML, CSS and vanilla JavaScript.
 
-Built as a university group project.
-IDs: `i242582`, `i242510`, `i242567`
+## Group project and my part
+
+UniSpace began as a **university group project** by three students (IDs i242582, i242510 and i242567). This repository is a fork of [`Fireguy1/UniSpace-`](https://github.com/Fireguy1/UniSpace-), the repository of that original submission. The original code is kept in the history as the first commit (`full project`).
+
+Everything after that first commit is **post-submission work by Abdullah Waheed (i242510)** and is listed in the commit history, commit by commit: the security fixes above, the approval workflow and audit trail, the database constraints, the automated tests, the redesigned frontend and this documentation.
+
+License: none chosen yet. Contact: [GitHub](https://github.com/abdullahwaheed0112) · [LinkedIn](https://linkedin.com/in/abdullah-waheed-05a5a1416)
