@@ -64,6 +64,7 @@ if (dateSelect && timeSlotSelect) {
         for (let i = startDay; i <= 7; i++) {
             const nextDate = new Date(today);
             nextDate.setDate(today.getDate() + i);
+            if (nextDate.getDay() === 0 || nextDate.getDay() === 6) continue; // resources are bookable Monday to Friday only
             const offset = nextDate.getTimezoneOffset();
             const localDate = new Date(nextDate.getTime() - (offset * 60 * 1000));
             const value = localDate.toISOString().split("T")[0];

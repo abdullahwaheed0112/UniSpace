@@ -9,8 +9,8 @@ form.addEventListener("submit", async function (e) {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
-    if (password.length < 6) {
-        message.textContent = "Password must be at least 6 characters!";
+    if (password.length < 8) {
+        message.textContent = "Password must be at least 8 characters!";
         message.className = "error";
         return;
     }
