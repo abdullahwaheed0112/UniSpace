@@ -1,13 +1,20 @@
-# UniSpace: campus room and lab booking
+# UniSpace: campus room and lab booking, secured and tested
 
 ![Python](https://img.shields.io/badge/Python-3.15-blue?style=flat-square&logo=python)
 ![Flask](https://img.shields.io/badge/Flask-3.1-lightgrey?style=flat-square&logo=flask)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?style=flat-square&logo=mysql&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen?style=flat-square)
 
-> A Flask and MySQL web app where students request campus rooms and labs and administrators review, approve or reject the requests. This fork takes a group course project and hardens it: **server-enforced role-based access, hashed passwords, signed login tokens, a multi-step approval workflow with an audit trail, database-level booking rules, and 94 automated tests**, behind a redesigned interface.
+**Turned a group course app with open admin endpoints and plain-text passwords into one with enforced roles, an audit trail and 94 tests.**
 
-![Availability grid for the Lab, with free, requested, booked and blocked slots](docs/images/availability.png)
+| | |
+|---|---|
+| **Problem** | Room bookings run on messages and spreadsheets and slots get double-booked. The first version of the app also let anyone act as admin. |
+| **Solution** | Server-enforced roles, hashed passwords and signed tokens, a multi-step approval workflow, booking rules enforced by the database, and a redesigned interface. |
+| **Result** | **94 automated tests; at most one approved booking per slot, guaranteed by MySQL.** |
+| **My role** | Group project of three. I worked from the Flask backend to the frontend; all work after the original submission is mine. |
+
+![Availability grid with free, requested, booked and blocked slots](docs/images/availability.png)
 
 ## The problem
 
@@ -248,6 +255,15 @@ UniSpace/
 ## Tech stack
 
 Python · Flask · Flask-CORS · MySQL 8 · mysql-connector-python · Werkzeug (scrypt) · itsdangerous (signed tokens) · pytest · HTML, CSS and vanilla JavaScript.
+
+## Limitations and next steps
+
+The security gaps still open are listed under [Security](#security-what-was-fixed). Beyond those:
+
+- Not deployed: it has been run and tested locally only, and there is no live demo yet.
+- Bookings are limited to weekdays, up to seven days ahead.
+- Tests cover the Python backend; the frontend was checked by hand in a browser.
+- Next: `HttpOnly` cookie sessions, sign-in rate limiting, a production server behind HTTPS, password reset, and a hosted demo.
 
 ## Group project and my part
 
